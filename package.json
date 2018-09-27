@@ -1,0 +1,74 @@
+{
+  "name": "scatter-api",
+  "version": "1.0.0",
+  "description": "Scatter API Service",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GetScatter/scatter-api.git"
+  },
+  "author": "Nathan James",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "engines": {
+    "node": "~6.9.1",
+    "npm": ">=3.10.0"
+  },
+  "scripts": {
+    "prestart": "npm run -s build",
+    "prod": "node dist/index.js",
+    "start": "nodemon src/index.js --exec \"node -r dotenv/config -r babel-register\"",
+    "clean": "rimraf dist",
+    "build": "npm run clean && mkdir -p dist && babel src -s -D -d dist",
+    "test": "jest --watch"
+  },
+  "dependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "bluebird": "^3.5.2",
+    "body-parser": "^1.18.2",
+    "cors": "^2.8.4",
+    "couchbase": "^2.5.1",
+    "es6-promise": "^4.2.5",
+    "express": "^4.16.2",
+    "isomorphic-fetch": "^2.2.1",
+    "morgan": "^1.9.0",
+    "pug": "^2.0.0-beta11",
+    "rimraf": "^2.6.2"
+  },
+  "devDependencies": {
+    "babel-jest": "^21.2.0",
+    "babel-register": "^6.26.0",
+    "dotenv": "^4.0.0",
+    "jest": "^21.2.1",
+    "nodemon": "^1.12.1",
+    "supertest": "^3.0.0"
+  },
+  "babel": {
+    "presets": [
+      [
+        "env",
+        {
+          "targets": {
+            "node": "current"
+          }
+        }
+      ]
+    ],
+    "plugins": [
+      "transform-object-rest-spread",
+      "transform-class-properties"
+    ]
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "bugs": {
+    "url": "https://github.com/vmasto/express-babel/issues"
+  },
+  "homepage": "https://github.com/vmasto/express-babel#readme",
+  "directories": {
+    "test": "test"
+  }
+}
