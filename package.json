@@ -22,6 +22,7 @@
     "test": "jest --watch"
   },
   "dependencies": {
+    "aes-oop": "^1.0.4",
     "babel-cli": "^6.26.0",
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
@@ -30,12 +31,16 @@
     "body-parser": "^1.18.2",
     "cors": "^2.8.4",
     "couchbase": "^2.5.1",
+    "create-hash": "^1.2.0",
+    "eosjs-ecc": "^4.0.4",
     "es6-promise": "^4.2.5",
     "express": "^4.16.2",
+    "get-random-values": "^1.2.0",
     "isomorphic-fetch": "^2.2.1",
     "morgan": "^1.9.0",
     "pug": "^2.0.0-beta11",
-    "rimraf": "^2.6.2"
+    "rimraf": "^2.6.2",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "babel-jest": "^21.2.0",
