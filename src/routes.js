@@ -26,8 +26,7 @@ routes.get('/', (req, res) => {
 });
 
 routes.get('/prices', async (req, res) => {
-  const prices = await getPrices();
-  const {EOS, ETH, TRX} = prices.value;
+  const {EOS, ETH, TRX} = await PriceService.getPrices();
   res.json({ EOS, ETH, TRX });
 });
 

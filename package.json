@@ -19,7 +19,9 @@
     "start": "nodemon src/index.js --exec \"node -r dotenv/config -r babel-register\"",
     "clean": "rimraf dist",
     "build": "npm run clean && mkdir -p dist && babel src -s -D -d dist",
-    "test": "jest --watch"
+    "routetest": "jest --watch",
+    "testfile": "mocha --require babel-core/register --exit --timeout 1000000",
+    "test": "npm run testfile \"test/**/*.spec.js\" --timeout 1000000"
   },
   "dependencies": {
     "aes-oop": "^1.0.4",
@@ -45,8 +47,10 @@
   "devDependencies": {
     "babel-jest": "^21.2.0",
     "babel-register": "^6.26.0",
+    "chai": "^4.2.0",
     "dotenv": "^4.0.0",
     "jest": "^21.2.1",
+    "mocha": "^5.2.0",
     "nodemon": "^1.12.1",
     "supertest": "^3.0.0"
   },

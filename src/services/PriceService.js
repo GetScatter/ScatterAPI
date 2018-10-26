@@ -8,10 +8,19 @@ let bucket;
 
 const cmcKey = config('CMC');
 
+// Saving last prices in RAM, to alleviate DB calls.
+// Mimics eventually persistent behavior.
+let pricesInRam;
+
 export default class PriceService {
 
     static setBucket(_b){
         bucket = _b;
+    }
+
+    static async getPrices(){
+        if(!pricesInRam) pricesInRam = (await bucket.get('prices')).value;
+        return pricesInRam;
     }
 
     static async watchPrices(){
@@ -23,8 +32,10 @@ export default class PriceService {
 
                 const prices = await PriceService.getAll();
 
-                if(prices && Object.keys(prices).length)
+                if(prices && Object.keys(prices).length) {
                     await bucket.upsert('prices', prices);
+                    pricesInRam = prices;
+                }
 
                 resolve(true);
             };

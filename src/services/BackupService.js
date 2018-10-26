@@ -2,6 +2,7 @@ import config from '../util/config'
 import createHash from 'create-hash';
 const uuid4 = require('uuid/v4');
 import ecc from 'eosjs-ecc';
+import PriceService from './PriceService';
 
 /***
  * Backups are double encrypted. Once with this servers password,
@@ -13,16 +14,18 @@ import Aes from 'aes-oop';
 
 let bucket;
 
-const sha512 = data => createHash('sha256').update(data).digest('hex');
-const hashmail = email => sha512(email.trim());
+const sha512 = data =>                          createHash('sha256').update(data).digest('hex');
+const hashmail = email =>                       sha512(email.toLowerCase().trim());
 const getRecoveryCodeKey = code =>              `recover:${code}`;
-const emailToBackupKey = email =>               `email:${hashmail(email)}`;
+const emailToBackupKey = email =>               `email:${hashmail(email.toLowerCase().trim())}`;
 const getProofKey = uuid =>                     `proof:${uuid}`;
 const getAuthenticationKey = key =>             `auth:${key}`;
 const getBackupKey = uuid =>                    `backup:${uuid}`;
 const getEncryptableRandomKey = timestamp =>    `tester:${timestamp ? timestamp : startOfDay()}`;
 
-const removeCodeInMinutes = 1;
+const getTransactionKey = (blockchain, tx) =>   `tx:${blockchain.toLowerCase().trim()}-${tx.toLowerCase().trim()}`;
+
+const removeCodeInMinutes = 5;
 const tokenExpiration = 1000*60*60*24*100;
 
 const startOfDay = () => {
@@ -30,11 +33,19 @@ const startOfDay = () => {
     return +new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+const startOfWeek = () => {
+    const d = new Date();
+    const day = d.getDay(),
+        diff = d.getDate() - day + (day === 0 ? -6:1);
+    return +new Date(d.setDate(diff));
+}
+
 class Backup {
-    constructor(ip, backup, email){
+    constructor(ip, backups, email, latestPaymentKey){
         this.ip = ip;
-        this.backup = backup;
+        this.backups = backups; // [{data, timestamp}]
         this.email = email;
+        this.latestPaymentKey = latestPaymentKey;
     }
 
     static placeholder(){ return new Backup(); }
@@ -52,12 +63,55 @@ class Proof {
     static fromJson(json){ return Object.assign(this.placeholder(), json); }
 }
 
+class PaymentTransaction {
+    constructor(blockchain, transactionId){
+        this.blockchain = blockchain;
+        this.transactionId = transactionId;
+    }
+
+    static placeholder(){ return new PaymentTransaction(); }
+    static fromJson(json){ return Object.assign(this.placeholder(), json); }
+}
+
+const ACCEPTABLE_BLOCKCHAINS = ['eos'];
+class ClientPayment {
+    constructor(uuid, paidUntil, transaction){
+        this.uuid = uuid;
+        this.paidUntil = paidUntil;
+        this.transaction = transaction;
+    }
+
+    static placeholder(){ return new ClientPayment(); }
+    static fromJson(json){
+        let p = Object.assign(this.placeholder(), json);
+        if(json.hasOwnProperty('transaction')) p.transaction = PaymentTransaction.fromJson(json.transaction);
+        return p;
+    }
+
+    isValid(){
+        if(!ACCEPTABLE_BLOCKCHAINS.includes(this.transaction.blockchain)) return false;
+        if(!this.transaction.transactionId.length) return false;
+        return true;
+    }
+}
+
+
+const log = msg => console.log(`L-${new Date().toLocaleString()}: ${msg}`);
+const err = msg => console.error(`E-${new Date().toLocaleString()}: ${msg}`);
+
 export default class BackupService {
 
     static setBucket(_b){
         bucket = _b;
     }
 
+
+
+    /****************************************************/
+    /*                                                  */
+    /*                     HELPERS                      */
+    /*                                                  */
+    /****************************************************/
 
     /***
      * Gets a new UUID for the database which is unclaimed.
@@ -68,15 +122,59 @@ export default class BackupService {
         const uuid = uuid4();
         const exists = await bucket.exists(formatter(uuid));
         if(!exists) return uuid;
-        else return this.getNewUUID();
+        else return this.getNewUUID(formatter);
     }
+
+
+
+
+
+
+
+
+    /****************************************************/
+    /*                                                  */
+    /*                    PAYMENTS                      */
+    /*                                                  */
+    /****************************************************/
+
+
+    static async validatePayment(blockchain, transactionId){
+        const payment = new ClientPayment(null, null, PaymentTransaction.fromJson({blockchain, transactionId}));
+        if(!payment.isValid()) return console.error('Invalid payment');
+
+        // TODO: Validate payments made in crypto from the blockchain.
+        // Get current backup size. Cost = 0.5mb * $10/month
+        return payment;
+    }
+
+
+    static async payForExistingAccount(uuid, blockchain, transactionId){
+        if(!(await bucket.exists(getProofKey(uuid)))) return false;
+        const payment = await this.validatePayment(blockchain, transactionId);
+        if(!payment) return false;
+
+        payment.uuid = uuid;
+
+        //...
+        return true;
+    }
+
+
+
+
+    /****************************************************/
+    /*                                                  */
+    /*                 EMAIL RECOVERY                   */
+    /*                                                  */
+    /****************************************************/
+
 
     /***
      * Sends a code to the email specified so that the user can
      * recover their UUID to be able to pull their encrypted Backup
      * @param ip
      * @param email
-     * @returns {Promise.<*>}
      */
     static async sendRecoveryCodeToEmail(ip, email){
         if(!(await bucket.exists(emailToBackupKey(email))))
@@ -101,7 +199,6 @@ export default class BackupService {
      * the UUID.
      * @param ip
      * @param code
-     * @returns {Promise.<*>}
      */
     static async getUUIDFromRecoveryCode(ip, code){
         const found = await bucket.get(getRecoveryCodeKey(code)).catch(() => null).then(x => x.value);
@@ -114,11 +211,19 @@ export default class BackupService {
 
 
 
+
+
+
+    /****************************************************/
+    /*                                                  */
+    /*                 AUTHENTICATION                   */
+    /*                                                  */
+    /****************************************************/
+
     /***
      * Gets the proof key for a given day
      * Every day has a different proof key
      * @param timestamp
-     * @returns {Promise.<*>}
      */
     static async getEncryptableProof(timestamp){
         if(await bucket.exists(getEncryptableRandomKey(timestamp))) {
@@ -151,7 +256,6 @@ export default class BackupService {
      * authentication key and a private key for signing new updates with
      * @param uuid
      * @param cleartext
-     * @returns {Promise.<*>}
      */
     static async validateEncryptionTest(uuid, cleartext){
         let {proof, timestamp, lockedUntil} = await bucket.get(getProofKey(uuid));
@@ -171,6 +275,20 @@ export default class BackupService {
         }
     }
 
+
+
+
+
+
+
+
+
+    /****************************************************/
+    /*                                                  */
+    /*                  BACKUP LOGIC                    */
+    /*                                                  */
+    /****************************************************/
+
     /***
      * Gets a user and their current public key from an authentication key
      * @param authKey
@@ -186,18 +304,21 @@ export default class BackupService {
      * Gets a backup that can be decrypted on the user's machine
      * @param ip
      * @param authkey
-     * @returns {Promise.<void>}
      */
     static async getBackup(ip, authkey){
         this.getUserFromAuthKey(authkey, async uuid => {
             if(!uuid) return false;
+
             const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
             if(!backup) return false;
+
+            // Authentication is either broken or stale, failing.
             if(ip !== backup.ip) {
                 bucket.delete(getAuthenticationKey(authkey));
                 return false;
             }
-            return Aes.decrypt(backup.backup, encKey);
+
+            return Aes.decrypt(Aes.decrypt(backup.backups[0].data, encKey), encKey);
         })
     }
 
@@ -206,21 +327,36 @@ export default class BackupService {
      * private key associated with their current authentication
      * @param ip
      * @param authKey
-     * @param backup
+     * @param backupData
      * @param signedBackup
+     * @param encryptedProof
      */
-    static updateBackup(ip, authKey, backup, signedBackup){
+    static updateBackup(ip, authKey, backupData, signedBackup, encryptedProof = null){
         this.getUserFromAuthKey(authKey, async (uuid, publicKey) => {
             if(!uuid) return false;
-            const oldBackup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
-            if(!oldBackup) return false;
+            const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+            if(!backup) return false;
 
-            if(ip !== oldBackup.ip || ecc.recover(signedBackup, JSON.stringify(backup)) !== publicKey) {
+            // Authentication is either broken or stale, failing.
+            if(ip !== backup.ip || ecc.recover(signedBackup, JSON.stringify(backupData)) !== publicKey) {
                 bucket.delete(getAuthenticationKey(authKey));
                 return false;
             }
 
-            await bucket.upsert(getBackupKey(uuid), new Backup(ip, Aes.encrypt(backup, encKey)));
+            // Remove any latest backups
+            backup.backups = backup.filter(x => x.timestamp !== startOfWeek());
+            // Add new latest backup
+            backup.backups.unshift({timeStamp:startOfWeek(), data:Aes.encrypt(backupData, encKey)});
+            // Remove any backup over 4 weeks old
+            if(backup.backups.length > 4) backup.backups.pop();
+            // Update database entry
+            await bucket.upsert(getBackupKey(uuid),backup);
+
+            if(encryptedProof) {
+                const proof = new Proof(encryptedProof, startOfDay());
+                await bucket.upsert(getProofKey(uuid), proof);
+            }
+
             return true;
         })
     }
@@ -231,15 +367,48 @@ export default class BackupService {
      * @param encryptedProof
      * @param backupData
      * @param email
-     * @returns {Promise.<void>}
+     * @param blockchain
+     * @param transactionId
      */
-    static async createBackup(ip, encryptedProof, backupData, email){
+    static async createBackup(ip, encryptedProof, backupData, email, blockchain, transactionId){
+        if(await bucket.exists(emailToBackupKey(email))) {
+            console.error('Email already exists');
+            return false;
+        }
+
+        const payment = await this.validatePayment(blockchain, transactionId);
+        if(!payment) return false;
+
         const uuid = await this.getNewUUID(getProofKey);
+        payment.uuid = uuid;
+
         const proof = new Proof(encryptedProof, startOfDay());
-        const backup = new Backup(ip, Aes.encrypt(backupData, encKey), email);
+        const backup = new Backup(ip, [{timestamp:startOfWeek(), data:Aes.encrypt(backupData, encKey)}], email);
         await bucket.insert(emailToBackupKey(email), {uuid});
         await bucket.insert(getBackupKey(uuid), backup);
         await bucket.insert(getProofKey(uuid), proof);
+
+        return uuid;
+    }
+
+    static removeAll(ip, authKey, signedAuthKey){
+        this.getUserFromAuthKey(authKey, async (uuid, publicKey) => {
+            if(!uuid) return false;
+            const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+            if(!backup) return false;
+
+            // Authentication is either broken or stale, failing.
+            if(ip !== backup.ip || ecc.recover(signedAuthKey, authKey) !== publicKey) {
+                bucket.delete(getAuthenticationKey(authKey));
+                return false;
+            }
+
+            await bucket.remove(getProofKey(uuid));
+            await bucket.remove(getBackupKey(uuid));
+            await bucket.remove(emailToBackupKey(backup.email));
+
+            return true;
+        })
     }
 
 }
