@@ -34,6 +34,7 @@
     "cors": "^2.8.4",
     "couchbase": "^2.5.1",
     "create-hash": "^1.2.0",
+    "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",
     "es6-promise": "^4.2.5",
     "express": "^4.16.2",

@@ -42,11 +42,11 @@ const startOfWeek = () => {
 }
 
 class Backup {
-    constructor(ip, backups, email, latestPaymentKey){
+    constructor(ip, backups, email, paymentExpires){
         this.ip = ip;
         this.backups = backups; // [{data, timestamp}]
         this.email = email;
-        this.latestPaymentKey = latestPaymentKey;
+        this.paymentExpires = paymentExpires;
     }
 
     static placeholder(){ return new Backup(); }
@@ -100,6 +100,8 @@ class ClientPayment {
 const log = msg => console.log(`L-${new Date().toLocaleString()}: ${msg}`);
 const err = msg => console.error(`E-${new Date().toLocaleString()}: ${msg}`);
 
+
+
 export default class BackupService {
 
     static setBucket(_b){
@@ -147,6 +149,8 @@ export default class BackupService {
     static async validatePayment(blockchain, transactionId){
         const payment = new ClientPayment(null, null, PaymentTransaction.fromJson({blockchain, transactionId}));
         if(!payment.isValid()) return console.error('Invalid payment');
+
+        if(testing) return payment;
 
         // TODO: Validate payments made in crypto from the blockchain.
         // Get current backup size. Cost = 0.5mb * $10/month
