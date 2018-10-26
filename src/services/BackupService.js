@@ -59,7 +59,7 @@ class Proof {
         this.lockedUntil = lockedUntil;
     }
 
-    static placeholder(){ return new Backup(); }
+    static placeholder(){ return new Proof(); }
     static fromJson(json){ return Object.assign(this.placeholder(), json); }
 }
 
@@ -246,7 +246,7 @@ export default class BackupService {
      */
     static async getEncryptionTester(uuid){
         if(!(await bucket.exists(getProofKey(uuid)))) return;
-        const {proof} = await bucket.get(getProofKey(uuid));
+        const {proof} = (await bucket.get(getProofKey(uuid))).value;
         return proof;
     }
 
@@ -258,21 +258,26 @@ export default class BackupService {
      * @param cleartext
      */
     static async validateEncryptionTest(uuid, cleartext){
-        let {proof, timestamp, lockedUntil} = await bucket.get(getProofKey(uuid));
-        if(+new Date() < lockedUntil) return console.error('locked');
-        const {token} = await this.getEncryptableProof(timestamp);
-        if(cleartext !== token){
-           // Locking for 10 minutes
-           lockedUntil = +new Date() + 1000*60*10;
-           await bucket.upsert(getProofKey(uuid), new Proof(proof, timestamp, lockedUntil));
-           return console.error('locked');
-        } else {
-            const authKey = await this.getNewUUID(getAuthenticationKey);
-            const privateKey = ecc.randomKey();
-            const publicKey = privateKey.toPublic();
-            await bucket.upsert(getAuthenticationKey(authKey), {uuid, publicKey});
-            return [authKey, privateKey.toWif()];
-        }
+        let proof = await bucket.get(getProofKey(uuid)).catch(() => null).then(x => Proof.fromJson(x.value));
+        if(!proof) return;
+
+        const token = await this.getEncryptableProof(proof.timestamp);
+        if(!token) return;
+
+        if(+new Date() > proof.lockedUntil) {
+            if (cleartext !== token) {
+                // Locking for 10 minutes
+                proof.lockedUntil = +new Date() + 1000 * 60 * 10;
+                await bucket.upsert(getProofKey(uuid), proof);
+                return console.error('locked');
+            } else {
+                const authKey = await this.getNewUUID(getAuthenticationKey);
+                const privateKey = await ecc.randomKey();
+                const publicKey = ecc.PrivateKey(privateKey).toPublic().toString();
+                await bucket.upsert(getAuthenticationKey(authKey), {uuid, publicKey});
+                return [authKey, privateKey];
+            }
+        } else return console.error('locked');
     }
 
 
@@ -292,34 +297,35 @@ export default class BackupService {
     /***
      * Gets a user and their current public key from an authentication key
      * @param authKey
-     * @param callback
      */
-    static getUserFromAuthKey(authKey, callback){
-        bucket.get(getAuthenticationKey(authKey)).catch(() => ({uuid:null})).then(({uuid, publicKey}) => {
-            callback(uuid, publicKey);
-        })
+    static async getUserFromAuthKey(authKey){
+        return bucket.get(getAuthenticationKey(authKey))
+            .catch(() => [null])
+            .then(x => {
+                if(!x || !x.value) return [null];
+                return [x.value.uuid, x.value.publicKey]
+            })
     }
 
     /***
      * Gets a backup that can be decrypted on the user's machine
      * @param ip
-     * @param authkey
+     * @param authKey
      */
-    static async getBackup(ip, authkey){
-        this.getUserFromAuthKey(authkey, async uuid => {
-            if(!uuid) return false;
+    static async getBackup(ip, authKey){
+        const [uuid, publicKey] = await this.getUserFromAuthKey(authKey);
+        if(!uuid) return false;
 
-            const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
-            if(!backup) return false;
+        const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+        if(!backup) return false;
 
-            // Authentication is either broken or stale, failing.
-            if(ip !== backup.ip) {
-                bucket.delete(getAuthenticationKey(authkey));
-                return false;
-            }
+        // Authentication is either broken or stale, failing.
+        if(ip !== backup.ip) {
+            await bucket.remove(getAuthenticationKey(authKey));
+            return false;
+        }
 
-            return Aes.decrypt(Aes.decrypt(backup.backups[0].data, encKey), encKey);
-        })
+        return JSON.stringify(Aes.decrypt(backup.backups[0].data, encKey));
     }
 
     /***
@@ -331,34 +337,36 @@ export default class BackupService {
      * @param signedBackup
      * @param encryptedProof
      */
-    static updateBackup(ip, authKey, backupData, signedBackup, encryptedProof = null){
-        this.getUserFromAuthKey(authKey, async (uuid, publicKey) => {
-            if(!uuid) return false;
-            const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
-            if(!backup) return false;
+    static async updateBackup(ip, authKey, backupData, signedBackup, encryptedProof = null){
+        const [uuid, publicKey] = await this.getUserFromAuthKey(authKey);
+        if(!uuid) return false;
 
-            // Authentication is either broken or stale, failing.
-            if(ip !== backup.ip || ecc.recover(signedBackup, JSON.stringify(backupData)) !== publicKey) {
-                bucket.delete(getAuthenticationKey(authKey));
-                return false;
-            }
+        if(!(await bucket.exists(getBackupKey(uuid)))) return console.error('No backup');
 
-            // Remove any latest backups
-            backup.backups = backup.filter(x => x.timestamp !== startOfWeek());
-            // Add new latest backup
-            backup.backups.unshift({timeStamp:startOfWeek(), data:Aes.encrypt(backupData, encKey)});
-            // Remove any backup over 4 weeks old
-            if(backup.backups.length > 4) backup.backups.pop();
-            // Update database entry
-            await bucket.upsert(getBackupKey(uuid),backup);
+        const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+        if(!backup) return console.error('no backup');
 
-            if(encryptedProof) {
-                const proof = new Proof(encryptedProof, startOfDay());
-                await bucket.upsert(getProofKey(uuid), proof);
-            }
+        // Authentication is either broken or stale, failing.
+        if(ip !== backup.ip || ecc.recover(signedBackup, JSON.stringify(backupData)) !== publicKey) {
+            await bucket.remove(getAuthenticationKey(authKey));
+            return console.error('bad auth');
+        }
 
-            return true;
-        })
+        // Remove any latest backups
+        backup.backups = backup.backups.filter(x => x.timestamp !== startOfWeek());
+        // Add new latest backup
+        backup.backups.unshift({timeStamp:startOfWeek(), data:Aes.encrypt(backupData, encKey)});
+        // Remove any backup over 4 weeks old
+        if(backup.backups.length > 4) backup.backups.pop();
+        // Update database entry
+        await bucket.upsert(getBackupKey(uuid),backup);
+
+        if(encryptedProof) {
+            const proof = new Proof(encryptedProof, startOfDay());
+            await bucket.upsert(getProofKey(uuid), proof);
+        }
+
+        return true;
     }
 
     /***
@@ -391,24 +399,37 @@ export default class BackupService {
         return uuid;
     }
 
-    static removeAll(ip, authKey, signedAuthKey){
-        this.getUserFromAuthKey(authKey, async (uuid, publicKey) => {
-            if(!uuid) return false;
-            const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
-            if(!backup) return false;
+    static async removeAll(ip, authKey, signedAuthKey){
+        const [uuid, publicKey] = await this.getUserFromAuthKey(authKey);
+        if(!uuid) return console.error('no uuid');
 
-            // Authentication is either broken or stale, failing.
-            if(ip !== backup.ip || ecc.recover(signedAuthKey, authKey) !== publicKey) {
-                bucket.delete(getAuthenticationKey(authKey));
-                return false;
-            }
+        const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+        if(!backup) return console.error('no backup');
 
-            await bucket.remove(getProofKey(uuid));
-            await bucket.remove(getBackupKey(uuid));
-            await bucket.remove(emailToBackupKey(backup.email));
+        // Authentication is either broken or stale, failing.
+        if(ip !== backup.ip || ecc.recover(signedAuthKey, authKey) !== publicKey) {
+            await bucket.remove(getAuthenticationKey(authKey));
+            return console.error('no auth');
+        }
 
-            return true;
-        })
+        await bucket.remove(getAuthenticationKey(authKey));
+        await bucket.remove(getProofKey(uuid));
+        await bucket.remove(getBackupKey(uuid));
+        await bucket.remove(emailToBackupKey(backup.email));
+
+        return true;
+    }
+
+
+    // TODO: TESTING ONLY
+    static async deleteFromEmail(email){
+        if(!(await bucket.exists(emailToBackupKey(email)))) return;
+        const {uuid} = await bucket.get(emailToBackupKey(email)).catch(() => ({uuid:null})).then(x => x.value);
+        if(!uuid) return;
+        await bucket.remove(getProofKey(uuid));
+        await bucket.remove(getBackupKey(uuid));
+        await bucket.remove(emailToBackupKey(email));
+        return true;
     }
 
 }
