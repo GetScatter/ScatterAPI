@@ -23,8 +23,9 @@ const getAuthenticationKey = key =>             `auth:${key}`;
 const getBackupKey = uuid =>                    `backup:${uuid}`;
 const getEncryptableRandomKey = timestamp =>    `tester:${timestamp ? timestamp : startOfDay()}`;
 
-const getTransactionKey = (blockchain, tx) =>   `tx:${blockchain.toLowerCase().trim()}-${tx.toLowerCase().trim()}`;
+const getTransactionKey = (blockchain, tx) =>   `tx:${blockchain.toLowerCase().trim()}:${tx.toLowerCase().trim()}`;
 
+let testing = false;
 const removeCodeInMinutes = 5;
 const tokenExpiration = 1000*60*60*24*100;
 
@@ -103,6 +104,10 @@ export default class BackupService {
 
     static setBucket(_b){
         bucket = _b;
+    }
+
+    static setToTesting(){
+        testing = true;
     }
 
 
@@ -190,6 +195,10 @@ export default class BackupService {
                 if(exists) bucket.remove(getRecoveryCodeKey(code));
             })
         }, 1000*60*removeCodeInMinutes);
+
+        if(testing){
+            // TODO: Send email
+        }
 
         return code;
     }

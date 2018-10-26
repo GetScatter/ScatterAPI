@@ -104,6 +104,17 @@ describe('BackupService', () => {
         });
     });
 
+    it('should be able to recover uuid from email code', done => {
+        new Promise(async() => {
+            const code = await BackupService.sendRecoveryCodeToEmail(ip, email);
+            assert(code, "Could not get recovery code");
+
+            const recoveryUuid = await BackupService.getUUIDFromRecoveryCode(ip, code);
+            assert(uuid === recoveryUuid, "Recovery uuid did not match");
+            done();
+        });
+    });
+
     it('should delete all records', done => {
         new Promise(async() => {
             await BackupService.removeAll(ip, authKey, ecc.sign(authKey, privateKey));
