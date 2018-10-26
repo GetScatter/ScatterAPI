@@ -3,6 +3,7 @@ import createHash from 'create-hash';
 const uuid4 = require('uuid/v4');
 import ecc from 'eosjs-ecc';
 import PriceService from './PriceService';
+import TransactionService from './TransactionService';
 
 /***
  * Backups are double encrypted. Once with this servers password,
@@ -23,7 +24,7 @@ const getAuthenticationKey = key =>             `auth:${key}`;
 const getBackupKey = uuid =>                    `backup:${uuid}`;
 const getEncryptableRandomKey = timestamp =>    `tester:${timestamp ? timestamp : startOfDay()}`;
 
-const getTransactionKey = (blockchain, tx) =>   `tx:${blockchain.toLowerCase().trim()}:${tx.toLowerCase().trim()}`;
+//const getTransactionKey = (blockchain, tx) =>   `tx:${blockchain.toLowerCase().trim()}:${tx.toLowerCase().trim()}`;
 
 let testing = false;
 const removeCodeInMinutes = 5;
@@ -51,6 +52,12 @@ class Backup {
 
     static placeholder(){ return new Backup(); }
     static fromJson(json){ return Object.assign(this.placeholder(), json); }
+
+    addDays(days){
+        let startingTime = this.paymentExpires;
+        if(startingTime < +new Date()) startingTime = +new Date();
+        this.paymentExpires = startingTime + (1000*60*60*24*days);
+    }
 }
 
 class Proof {
@@ -76,10 +83,11 @@ class PaymentTransaction {
 
 const ACCEPTABLE_BLOCKCHAINS = ['eos'];
 class ClientPayment {
-    constructor(uuid, paidUntil, transaction){
+    constructor(uuid, transaction, amount, daysPaidFor){
         this.uuid = uuid;
-        this.paidUntil = paidUntil;
         this.transaction = transaction;
+        this.amount = amount;
+        this.daysPaidFor = daysPaidFor;
     }
 
     static placeholder(){ return new ClientPayment(); }
@@ -132,6 +140,10 @@ export default class BackupService {
         else return this.getNewUUID(formatter);
     }
 
+    static async getPersistedBackup(uuid){
+        return bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+    }
+
 
 
 
@@ -147,25 +159,45 @@ export default class BackupService {
 
 
     static async validatePayment(blockchain, transactionId){
-        const payment = new ClientPayment(null, null, PaymentTransaction.fromJson({blockchain, transactionId}));
+        const payment = new ClientPayment(null, PaymentTransaction.fromJson({blockchain, transactionId}));
         if(!payment.isValid()) return console.error('Invalid payment');
 
         if(testing) return payment;
 
-        // TODO: Validate payments made in crypto from the blockchain.
-        // Get current backup size. Cost = 0.5mb * $10/month
+        let amount;
+        switch(blockchain){
+            case 'eos':
+                amount = await TransactionService.eos(transactionId, 1);
+                break;
+            default:
+                return false;
+        }
+
+        if(!amount) return false;
+
+        payment.amount = amount;
+        payment.daysPaidFor = await PriceService.getBackupTimePaidFor(blockchain, amount);
+
         return payment;
     }
 
 
     static async payForExistingAccount(uuid, blockchain, transactionId){
+        if(await bucket.exists(transactionId)) return false;
         if(!(await bucket.exists(getProofKey(uuid)))) return false;
         const payment = await this.validatePayment(blockchain, transactionId);
         if(!payment) return false;
 
         payment.uuid = uuid;
 
-        //...
+        const backup = await bucket.get(getBackupKey(uuid));
+        if(!backup) return false;
+
+        backup.addDays(payment.daysPaidFor);
+        await bucket.insert(transactionId, {});
+        await bucket.upsert(getBackupKey(uuid), backup);
+
+
         return true;
     }
 
@@ -329,7 +361,7 @@ export default class BackupService {
         const [uuid, publicKey] = await this.getUserFromAuthKey(authKey);
         if(!uuid) return false;
 
-        const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+        const backup = await this.getPersistedBackup(uuid);
         if(!backup) return false;
 
         // Authentication is either broken or stale, failing.
@@ -356,7 +388,7 @@ export default class BackupService {
 
         if(!(await bucket.exists(getBackupKey(uuid)))) return console.error('No backup');
 
-        const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+        const backup = await this.getPersistedBackup(uuid);
         if(!backup) return console.error('no backup');
 
         // Authentication is either broken or stale, failing.
@@ -392,6 +424,7 @@ export default class BackupService {
      * @param transactionId
      */
     static async createBackup(ip, encryptedProof, backupData, email, blockchain, transactionId){
+        if(await bucket.exists(transactionId)) return false;
         if(await bucket.exists(emailToBackupKey(email))) {
             console.error('Email already exists');
             return false;
@@ -405,6 +438,8 @@ export default class BackupService {
 
         const proof = new Proof(encryptedProof, startOfDay());
         const backup = new Backup(ip, [{timestamp:startOfWeek(), data:Aes.encrypt(backupData, encKey)}], email);
+        backup.addDays(payment.daysPaidFor);
+        await bucket.insert(transactionId, {});
         await bucket.insert(emailToBackupKey(email), {uuid});
         await bucket.insert(getBackupKey(uuid), backup);
         await bucket.insert(getProofKey(uuid), proof);
@@ -416,7 +451,7 @@ export default class BackupService {
         const [uuid, publicKey] = await this.getUserFromAuthKey(authKey);
         if(!uuid) return console.error('no uuid');
 
-        const backup = await bucket.get(getBackupKey(uuid)).catch(() => null).then(x => Backup.fromJson(x.value));
+        const backup = await this.getPersistedBackup(uuid);
         if(!backup) return console.error('no backup');
 
         // Authentication is either broken or stale, failing.

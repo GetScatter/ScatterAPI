@@ -8,6 +8,7 @@ let bucket;
 
 const cmcKey = config('CMC');
 
+
 // Saving last prices in RAM, to alleviate DB calls.
 // Mimics eventually persistent behavior.
 let pricesInRam;
@@ -22,28 +23,27 @@ export default class PriceService {
      * Converts any paid amount to available backup service usage time.
      * @param blockchain
      * @param amount
-     * @param originalExpirationDate
      * @returns {Promise.<number>}
      */
-    static async getBackupTimePaidFor(blockchain, amount, originalExpirationDate = +new Date()){
+    static async getBackupTimePaidFor(blockchain, amount){
         const prices = await PriceService.getPrices();
-        let timeFromNow = 0;
 
         // $ per day
         const pricePerDay = 0.50;
+
+        let daysPaidFor = 0;
 
         switch(blockchain){
             case 'eos':
                 const price = parseFloat(prices.EOS.price).toFixed(2);
                 const paid = parseFloat(amount.split(' ')[0]).toFixed(4);
-                const daysPaidFor = Math.round(parseFloat((price / pricePerDay) * paid));
-                timeFromNow = originalExpirationDate + (1000*60*60*24*daysPaidFor);
+                daysPaidFor = Math.round(parseFloat((price / pricePerDay) * paid));
                 break;
             default:
                 break;
         }
 
-        return timeFromNow;
+        return daysPaidFor;
     }
 
     static async getPrices(){
