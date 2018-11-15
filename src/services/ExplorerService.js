@@ -1,19 +1,19 @@
 import "isomorphic-fetch"
 import config from '../util/config'
 
-// Once every 30 minutes.
-const intervalTime = 60000 * 30;
+// Once every 12 hours.
+const intervalTime = 60000 * 60 * 12;
 let interval;
 let bucket;
-const bucketKey = 'apps';
-const url = 'https://raw.githubusercontent.com/GetScatter/ScatterApps/master/apps.json';
+const bucketKey = 'explorers';
+const url = 'https://raw.githubusercontent.com/GetScatter/ScatterExplorers/master/explorers.json';
 
 
 // Saving last prices in RAM, to alleviate DB calls.
 // Mimics eventually persistent behavior.
 let inRam;
 
-export default class AppService {
+export default class ExplorerService {
 
     static setBucket(_b){
         bucket = _b;
@@ -31,10 +31,10 @@ export default class AppService {
             const set = async () => {
                 if(!bucket) return;
 
-                const apps = await AppService.getAll();
-                if(apps) {
-                    await bucket.upsert(bucketKey, apps);
-                    inRam = apps;
+                const explorers = await ExplorerService.getAll();
+                if(explorers) {
+                    await bucket.upsert(bucketKey, explorers);
+                    inRam = explorers;
                 }
 
                 resolve(true);

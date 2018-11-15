@@ -51,7 +51,7 @@ export default class PriceService {
         return pricesInRam;
     }
 
-    static async watchPrices(){
+    static async watch(){
         clearInterval(priceInterval);
         return new Promise(async resolve => {
 
