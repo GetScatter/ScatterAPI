@@ -1,7 +1,7 @@
 import "isomorphic-fetch"
 import config from '../util/config'
 
-// Once every 30 minutes.
+// Once every hour.
 const intervalTime = 60000 * 30;
 let priceInterval;
 let bucket;
