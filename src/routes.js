@@ -5,6 +5,7 @@ import PriceService from './services/PriceService';
 import AppService from "./services/AppService";
 import ExplorerService from "./services/ExplorerService";
 import FiatService from "./services/FiatService";
+import ProxyService from "./services/ProxyService";
 // import BackupService from './services/BackupService';
 
 import couchbase from './database/couchbase'
@@ -15,12 +16,14 @@ PriceService.setBucket(bucket);
 AppService.setBucket(bucket);
 ExplorerService.setBucket(bucket);
 FiatService.setBucket(bucket);
+ProxyService.setBucket(bucket);
 // BackupService.setBucket(bucket);
 
 PriceService.watch();
 ExplorerService.watch();
 AppService.watch();
 FiatService.watch();
+ProxyService.watch();
 
 
 const CURRENCIES = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CAD', 'CHF'];
@@ -83,6 +86,13 @@ routes.get('/explorers', async (req, res) => {
   let apps = await ExplorerService.getApps();
   if(flat) apps = flattenBlockchainObject(apps);
   res.json(apps);
+});
+
+routes.get('/proxies', async (req, res) => {
+  const {flat} = req.query;
+  let proxies = await ProxyService.getProxies();
+  if(flat) proxies = flattenBlockchainObject(proxies);
+  res.json(proxies);
 });
 
 routes.get('/apps', async (req, res) => {
