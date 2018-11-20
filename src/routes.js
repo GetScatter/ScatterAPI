@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import Blockchains from './util/blockchains';
 
+import TransactionService, {PAYMENT_ACCOUNTS} from "./services/TransactionService";
+
 import PriceService from './services/PriceService';
 import AppService from "./services/AppService";
 import ExplorerService from "./services/ExplorerService";
 import FiatService from "./services/FiatService";
 import ProxyService from "./services/ProxyService";
+import AccountService from "./services/AccountService";
 // import BackupService from './services/BackupService';
 
 import couchbase from './database/couchbase'
@@ -17,6 +20,7 @@ AppService.setBucket(bucket);
 ExplorerService.setBucket(bucket);
 FiatService.setBucket(bucket);
 ProxyService.setBucket(bucket);
+AccountService.setBucket(bucket);
 // BackupService.setBucket(bucket);
 
 PriceService.watch();
@@ -25,6 +29,14 @@ AppService.watch();
 FiatService.watch();
 ProxyService.watch();
 
+const flattenBlockchainObject = apps => {
+	return Object.keys(apps).reduce((acc, blockchain) => {
+		apps[blockchain].map(app => {
+			acc.push(Object.assign(app, {blockchain}));
+		});
+		return acc;
+	}, []);
+}
 
 const CURRENCIES = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CAD', 'CHF'];
 
@@ -71,16 +83,6 @@ routes.get('/prices', async (req, res) => {
   res.json(result);
 });
 
-
-const flattenBlockchainObject = apps => {
-  return Object.keys(apps).reduce((acc, blockchain) => {
-    apps[blockchain].map(app => {
-      acc.push(Object.assign(app, {blockchain}));
-    });
-    return acc;
-  }, []);
-}
-
 routes.get('/explorers', async (req, res) => {
   const {flat} = req.query;
   let apps = await ExplorerService.getApps();
@@ -110,8 +112,35 @@ routes.post('/apps', async (req, res) => {
   res.json(result)
 });
 
-routes.get('/profile', async (req, res) => {
+routes.post('/create_eos', async (req, res) => {
+	const defaultError = {error:'There was an error creating the account. Please try again later.'};
+	const {transaction_id, signature, keys, account_name} = req.body;
 
+	if(!keys.hasOwnProperty('active') || !keys.hasOwnProperty('owner') || !keys.active.length || !keys.owner.length){
+		return res.json({error:'Invalid keys'});
+	}
+
+	const minimumCost = await AccountService.getAccountMinimumCost();
+	if(!minimumCost) return res.json(defaultError);
+
+	const transactionStatus = await TransactionService.eos(transaction_id, minimumCost, PAYMENT_ACCOUNTS.EOS.NEW_ACCOUNT);
+	if(!transactionStatus || transactionStatus.hasOwnProperty('error')) return res.json(
+		transactionStatus.hasOwnProperty('error')
+			? transactionStatus.error
+			: {error:'The transaction could not be verified.'}
+	);
+
+	const [quantity, memo] = transactionStatus;
+
+	const leftForResources = parseFloat(quantity - minimumCost).toFixed(4);
+	if(!leftForResources || leftForResources <= 0) return res.json({error:'There was not enough EOS left for resources.'});
+
+	if(memo !== keys.active) return res.json({error:'The signature for account creation did not match the key from the exchange memo'});
+
+	const created = await AccountService.createEosAccount(account_name, keys, leftForResources, transaction_id, signature);
+	if(!created) return res.json(defaultError);
+
+	res.json({created});
 });
 
 
