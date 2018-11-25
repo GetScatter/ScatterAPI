@@ -35,7 +35,8 @@ NetworkService.watch();
 const flattenBlockchainObject = apps => {
 	return Object.keys(apps).reduce((acc, blockchain) => {
 		apps[blockchain].map(app => {
-			acc.push(Object.assign(app, {blockchain}));
+			const assigned = app.hasOwnProperty('blockchain') ? app : Object.assign(app, {blockchain});
+			acc.push(assigned);
 		});
 		return acc;
 	}, []);
