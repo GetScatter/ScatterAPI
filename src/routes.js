@@ -9,6 +9,7 @@ import ExplorerService from "./services/ExplorerService";
 import FiatService from "./services/FiatService";
 import ProxyService from "./services/ProxyService";
 import AccountService from "./services/AccountService";
+import NetworkService from "./services/NetworkService";
 // import BackupService from './services/BackupService';
 
 import couchbase from './database/couchbase'
@@ -21,6 +22,7 @@ ExplorerService.setBucket(bucket);
 FiatService.setBucket(bucket);
 ProxyService.setBucket(bucket);
 AccountService.setBucket(bucket);
+NetworkService.setBucket(bucket);
 // BackupService.setBucket(bucket);
 
 PriceService.watch();
@@ -28,6 +30,7 @@ ExplorerService.watch();
 AppService.watch();
 FiatService.watch();
 ProxyService.watch();
+NetworkService.watch();
 
 const flattenBlockchainObject = apps => {
 	return Object.keys(apps).reduce((acc, blockchain) => {
@@ -95,6 +98,13 @@ routes.get('/proxies', async (req, res) => {
   let proxies = await ProxyService.getProxies();
   if(flat) proxies = flattenBlockchainObject(proxies);
   res.json(proxies);
+});
+
+routes.get('/networks', async (req, res) => {
+  const {flat} = req.query;
+  let apps = await NetworkService.getNetworks();
+  if(flat) apps = flattenBlockchainObject(apps);
+  res.json(apps);
 });
 
 routes.get('/apps', async (req, res) => {
