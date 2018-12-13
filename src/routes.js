@@ -10,12 +10,17 @@ import FiatService from "./services/FiatService";
 import ProxyService from "./services/ProxyService";
 import AccountService from "./services/AccountService";
 import NetworkService from "./services/NetworkService";
+import LanguageService from "./services/LanguageService";
 // import BackupService from './services/BackupService';
 
 import couchbase from './database/couchbase'
 
 const bucket = couchbase('scatter');
 
+
+/********************************/
+/*           BUCKETS            */
+/********************************/
 PriceService.setBucket(bucket);
 AppService.setBucket(bucket);
 ExplorerService.setBucket(bucket);
@@ -23,14 +28,21 @@ FiatService.setBucket(bucket);
 ProxyService.setBucket(bucket);
 AccountService.setBucket(bucket);
 NetworkService.setBucket(bucket);
+LanguageService.setBucket(bucket);
 // BackupService.setBucket(bucket);
 
+
+
+/********************************/
+/*          WATCHERS            */
+/********************************/
 PriceService.watch();
 ExplorerService.watch();
 AppService.watch();
 FiatService.watch();
 ProxyService.watch();
 NetworkService.watch();
+LanguageService.watch();
 
 const flattenBlockchainObject = apps => {
 	return Object.keys(apps).reduce((acc, blockchain) => {
@@ -99,6 +111,11 @@ routes.get('/proxies', async (req, res) => {
   let proxies = await ProxyService.getProxies();
   if(flat) proxies = flattenBlockchainObject(proxies);
   res.json(proxies);
+});
+
+routes.get('/languages', async (req, res) => {
+	const {names, name} = req.query;
+  res.json(await LanguageService.getLanguages(!!names, name));
 });
 
 routes.get('/networks', async (req, res) => {
