@@ -17,7 +17,7 @@ const fetchJson = url => fetch(url, { json: true, gzip: true }).then(res => res.
 
 let inRam;
 
-export default class ExplorerService {
+export default class LanguageService {
 
     static setBucket(_b){
         bucket = _b;
@@ -40,7 +40,7 @@ export default class ExplorerService {
             const set = async () => {
                 if(!bucket) return;
 
-                const explorers = await ExplorerService.getAll();
+                const explorers = await LanguageService.getAll();
                 if(explorers) {
                     await bucket.upsert(bucketKey, explorers);
                     inRam = explorers;
