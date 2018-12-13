@@ -32,10 +32,18 @@ export default class ProxyService {
                 if(!bucket) return;
 
                 const proxies = await ProxyService.getAll();
-                if(proxies) {
-                    await bucket.upsert(bucketKey, proxies);
-                    inRam = proxies;
+                if(!proxies) return resolve(true);
+
+	            const alohaProxies = await ProxyService.getFromAloha();
+                if(alohaProxies.length){
+	                proxies.EOSIO = proxies.EOSIO.concat(alohaProxies).reduce((acc,x) => {
+		                if(!acc.find(y => y.account === x.account)) acc.push(x);
+		                return acc;
+	                }, []);
                 }
+
+	            await bucket.upsert(bucketKey, proxies);
+	            inRam = proxies;
 
                 resolve(true);
             };
@@ -49,7 +57,7 @@ export default class ProxyService {
 
     static getAll(){
         return Promise.race([
-            new Promise(resolve => setTimeout(() => resolve(false), 2500)),
+            new Promise(resolve => setTimeout(() => resolve(null), 10000)),
             fetch(url+`?rand=${Math.random() * 10000 + 1}`, {
                 json: true,
                 gzip: true
@@ -60,6 +68,26 @@ export default class ProxyService {
                 return null;
             })
         ])
+    }
+
+    static getFromAloha(){
+	    return Promise.race([
+		    new Promise(resolve => setTimeout(() => resolve([]), 10000)),
+		    fetch('https://www.alohaeos.com/vote/proxy?output=json&show=registered'+`?rand=${Math.random() * 10000 + 1}`, {
+			    json: true,
+			    gzip: true
+		    }).then(x => x.json()).then(res => {
+                const sorted = res.proxies.filter(x => x.account && x.philosophy).sort((a,b) => a.rank - b.rank).slice(0, 25);
+                return sorted.map(x => ({
+                    name:x.name,
+                    account:x.account,
+                    description:x.philosophy.substr(0,250)
+                }));
+		    }).catch(err => {
+			    console.log(err);
+			    return [];
+		    })
+	    ])
     }
 
 }
