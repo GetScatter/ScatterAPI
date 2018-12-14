@@ -154,7 +154,7 @@ routes.post('/create_eos', async (req, res) => {
 	const transactionStatus = await TransactionService.eos(transaction_id, minimumCost, PAYMENT_ACCOUNTS.EOS.NEW_ACCOUNT);
 	if(!transactionStatus || transactionStatus.hasOwnProperty('error')) return res.json(
 		transactionStatus.hasOwnProperty('error')
-			? transactionStatus.error
+			? {error:transactionStatus.error}
 			: {error:'The transaction could not be verified.'}
 	);
 
