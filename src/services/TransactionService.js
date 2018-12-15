@@ -39,10 +39,10 @@ export default class TransactionService {
 
         const {actions, expiration} = trx.trx;
         const trxDate = new Date(expiration);
-        const now = new Date();
-        if(trxDate.getFullYear() !== now.getFullYear()) return false;
-        if(trxDate.getMonth() !== now.getMonth()) return false;
-        if(trxDate.getDate() !== now.getDate()) return false;
+        // const now = new Date();
+        // if(trxDate.getFullYear() !== now.getFullYear()) return false;
+        // if(trxDate.getMonth() !== now.getMonth()) return false;
+        // if(trxDate.getDate() !== now.getDate()) return false;
         if(actions.length !== 1) return false;
 
         const action = actions[0];
