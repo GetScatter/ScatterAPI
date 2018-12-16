@@ -54,7 +54,7 @@ const flattenBlockchainObject = apps => {
 	}, []);
 }
 
-const CURRENCIES = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CAD', 'CHF'];
+const CURRENCIES = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CAD', 'CHF', 'AUD'];
 
 const routes = Router();
 
