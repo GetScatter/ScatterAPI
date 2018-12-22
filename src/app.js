@@ -3,10 +3,12 @@ import logger from 'morgan';
 import bodyParser from 'body-parser';
 import routes from './routes';
 import cors from 'cors';
+import compression from 'compression';
 
 const app = express();
 app.disable('x-powered-by');
 
+app.use(compression())
 app.use(cors());
 app.use(logger('dev', { skip: () => app.get('env') === 'test' }));
 app.use(bodyParser.urlencoded({ extended: true }));

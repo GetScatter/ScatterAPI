@@ -3,7 +3,7 @@ import Blockchains from './util/blockchains';
 
 import TransactionService, {PAYMENT_ACCOUNTS} from "./services/TransactionService";
 
-import PriceService from './services/PriceService';
+import PriceService, {PRICE_NETS} from './services/PriceService';
 import AppService from "./services/AppService";
 import ExplorerService from "./services/ExplorerService";
 import FiatService from "./services/FiatService";
@@ -12,6 +12,7 @@ import AccountService from "./services/AccountService";
 import NetworkService from "./services/NetworkService";
 import LanguageService from "./services/LanguageService";
 // import BackupService from './services/BackupService';
+import ExchangeService from "./services/ExchangeService";
 
 import couchbase from './database/couchbase'
 
@@ -54,91 +55,189 @@ const flattenBlockchainObject = apps => {
 	}, []);
 }
 
-const CURRENCIES = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CAD', 'CHF', 'AUD'];
 
 const routes = Router();
 
-routes.get('/', (req, res) => {
-  res.json({ hi:'byte'})
-});
+const senderIp = req => req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-routes.get('/currencies', (req, res) => {
-  res.json(CURRENCIES);
-});
+
+
+/************************************************/
+/*                                              */
+/*             PRICES AND EXCHANGE              */
+/*                                              */
+/************************************************/
+const CURRENCIES = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CAD', 'CHF', 'AUD'];
+
+routes.get('/currencies', (req, res) => res.json(CURRENCIES));
 
 routes.get('/prices', async (req, res) => {
-  const {v2} = req.query;
-  const {EOS, ETH, TRX} = await PriceService.getPrices();
+	const {v2} = req.query;
+	const prices = await PriceService.getPrices();
+	const {EOS, ETH, TRX} = prices[PRICE_NETS.MAIN];
+	const eosMainnetPrices = prices[PRICE_NETS.EOS_MAINNET];
 
-  let result;
+	let result;
 
-  if(v2){
-    let conversions = await FiatService.getConversions();
-    conversions = CURRENCIES.reduce((acc,tick) => {
-        acc[tick] = conversions[tick];
-        return acc;
-    }, {});
+	if(v2){
+		let conversions = await FiatService.getConversions();
+		conversions = CURRENCIES.reduce((acc,tick) => {
+			acc[tick] = conversions[tick];
+			return acc;
+		}, {});
 
-    const convertToMultiCurrency = x => {
-      return Object.keys(conversions).reduce((acc,fiatTicker) => {
-        acc[fiatTicker] = parseFloat(x.price * conversions[fiatTicker]).toFixed(2);
-        return acc;
-      }, {});
-    };
+		const convertToMultiCurrency = x => {
+			return Object.keys(conversions).reduce((acc,fiatTicker) => {
+				acc[fiatTicker] = parseFloat(x.price * conversions[fiatTicker]).toFixed(8);
+				return acc;
+			}, {});
+		};
 
-    result = {
-      'eos:eosio.token:eos':convertToMultiCurrency(EOS),
-      'eth:eth:eth':convertToMultiCurrency(ETH),
-      'trx:trx:trx':convertToMultiCurrency(TRX),
-    };
+		result = {
+			// BACKWARDS COMPAT! DONT REMOVE!
+			'eos:eosio.token:eos':convertToMultiCurrency(EOS),
+			'eth:eth:eth':convertToMultiCurrency(ETH),
+			'trx:trx:trx':convertToMultiCurrency(TRX),
 
-  } else {
-    result = { EOS, ETH, TRX };
-  }
 
-  res.json(result);
+			'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906':convertToMultiCurrency(EOS),
+			'eth:eth:eth:1':convertToMultiCurrency(ETH),
+			'trx:trx:trx:1':convertToMultiCurrency(TRX),
+		};
+
+		eosMainnetPrices.map(x => {
+			const clone = JSON.parse(JSON.stringify(x))
+			clone.price = EOS.price * x.price;
+			result[`eos:${x.contract}:${x.symbol}:${x.chainId}`.toLowerCase()] = convertToMultiCurrency(clone);
+		})
+
+	} else {
+		result = { EOS, ETH, TRX };
+	}
+
+	res.json(result);
 });
 
+routes.get('/prices/:blockchain/:chainId', async (req, res) => {
+
+	res.json(false);
+});
+
+routes.post('/exchange/pairs', async (req, res) => {
+	const {symbol, other} = req.body;
+	const ip = senderIp(req);
+	const exchange = new ExchangeService(ip);
+	const pairs = await exchange.pairs(symbol,other);
+	res.json(pairs);
+});
+
+routes.post('/exchange/rate', async (req, res) => {
+	const {symbol, other} = req.body;
+	const ip = senderIp(req);
+	const exchange = new ExchangeService(ip);
+	const rates = await exchange.rate(symbol,other);
+	res.json(rates);
+});
+
+routes.post('/exchange/order', async (req, res) => {
+	const {symbol, other, amount, from, to} = req.body;
+
+	const accountToExchangeAccount = acc => {
+		const blockchainAddress = () => {
+			switch (acc.blockchain) {
+				case 'eos': return acc.name;
+				case 'eth':
+				case 'trx':
+					return acc.address;
+			}
+		};
+
+		return {
+			address:blockchainAddress(),
+			tag:acc.hasOwnProperty('memo') && acc.memo && acc.memo.length ? acc.memo : null
+		}
+	};
+
+	const refund = accountToExchangeAccount(from);
+	const destination = accountToExchangeAccount(to);
+
+	//fromSymbol, toSymbol, amount, from, to
+	const ip = senderIp(req);
+	const exchange = new ExchangeService(ip);
+	const order = await exchange.createOrder(symbol,other, amount, refund, destination);
+
+	res.json(order);
+});
+
+routes.get('/exchange/order/:order', async (req, res) => {
+	const order = req.params.order;
+	if(!order) return res.json(null);
+
+	const ip = senderIp(req);
+	const exchange = new ExchangeService(ip);
+	res.json(await exchange.getOrder(order));
+})
+
+
+
+/************************************************/
+/*                                              */
+/*                  DATA CACHES                 */
+/*                                              */
+/************************************************/
+
 routes.get('/explorers', async (req, res) => {
-  const {flat} = req.query;
-  let apps = await ExplorerService.getApps();
-  if(flat) apps = flattenBlockchainObject(apps);
-  res.json(apps);
+	const {flat} = req.query;
+	let apps = await ExplorerService.getApps();
+	if(flat) apps = flattenBlockchainObject(apps);
+	res.json(apps);
 });
 
 routes.get('/proxies', async (req, res) => {
-  const {flat} = req.query;
-  let proxies = await ProxyService.getProxies();
-  if(flat) proxies = flattenBlockchainObject(proxies);
-  res.json(proxies);
+	const {flat} = req.query;
+	let proxies = await ProxyService.getProxies();
+	if(flat) proxies = flattenBlockchainObject(proxies);
+	res.json(proxies);
 });
 
 routes.get('/languages', async (req, res) => {
 	const {names, name} = req.query;
-  res.json(await LanguageService.getLanguages(!!names, name));
+	res.json(await LanguageService.getLanguages(!!names, name));
 });
 
 routes.get('/networks', async (req, res) => {
-  const {flat} = req.query;
-  let apps = await NetworkService.getNetworks();
-  if(flat) apps = flattenBlockchainObject(apps);
-  res.json(apps);
+	const {flat} = req.query;
+	let apps = await NetworkService.getNetworks();
+	if(flat) apps = flattenBlockchainObject(apps);
+	res.json(apps);
 });
 
 routes.get('/apps', async (req, res) => {
-  const {flat} = req.query;
-  let apps = await AppService.getApps();
-  if(flat) apps = flattenBlockchainObject(apps);
-  res.json(apps);
+	const {flat} = req.query;
+	let apps = await AppService.getApps();
+	if(flat) apps = flattenBlockchainObject(apps);
+	res.json(apps);
 });
 
 routes.post('/apps', async (req, res) => {
-  const {apps} = req.body;
-  let allApps = await AppService.getApps();
-  if(!apps || !apps.length) return res.json(allApps);
-  const result = flattenBlockchainObject(allApps).filter(x => apps.includes(x.applink));
-  res.json(result)
+	const {apps} = req.body;
+	let allApps = await AppService.getApps();
+	if(!apps || !apps.length) return res.json(allApps);
+	const result = flattenBlockchainObject(allApps).filter(x => apps.includes(x.applink));
+	res.json(result)
 });
+
+
+
+
+
+
+/************************************************/
+/*                                              */
+/*                 EOS ACCOUNTS                 */
+/*                                              */
+/************************************************/
+
 
 routes.post('/create_eos', async (req, res) => {
 	const defaultError = {error:'There was an error creating the account. Please try again later.'};
@@ -171,5 +270,8 @@ routes.post('/create_eos', async (req, res) => {
 	res.json({created});
 });
 
+
+
+routes.all('*', (req, res) => res.sendStatus(403));
 
 export default routes;
