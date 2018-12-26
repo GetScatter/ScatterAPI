@@ -1,12 +1,14 @@
 import "isomorphic-fetch"
 import config from '../util/config'
+import FiatService from "./FiatService";
+import {dateId, daysOld, hourNow} from "../util/dates";
 
-// Once every hour.
-const intervalTime = 60000 * 30;
+const intervalTime = 60000 * 15;
 let priceInterval;
 let bucket;
 
 const cmcKey = config('CMC');
+const COMPARE_KEY = config('COMPARE_KEY');
 
 
 // Saving last prices in RAM, to alleviate DB calls.
@@ -19,6 +21,8 @@ export const PRICE_NETS = {
 }
 
 const networks = Object.keys(PRICE_NETS).map(x => PRICE_NETS[x]);
+
+export const CURRENCIES = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CAD', 'CHF', 'AUD'];
 
 const cachePrices = async (id, prices) => {
 	if(prices && Object.keys(prices).length) {
@@ -74,6 +78,55 @@ export default class PriceService {
         return pricesInRam;
     }
 
+    static async getV2Prices(v2, convert = true){
+	    const prices = await PriceService.getPrices();
+	    const {EOS, ETH, TRX} = prices[PRICE_NETS.MAIN];
+	    const eosMainnetPrices = prices[PRICE_NETS.EOS_MAINNET];
+
+	    let result;
+
+
+	    let conversions = await FiatService.getConversions();
+	    conversions = CURRENCIES.reduce((acc,tick) => {
+		    acc[tick] = conversions[tick];
+		    return acc;
+	    }, {});
+
+	    const convertToMultiCurrency = x => {
+	    	if(!convert) return x;
+		    return Object.keys(conversions).reduce((acc,fiatTicker) => {
+			    acc[fiatTicker] = parseFloat(x.price * conversions[fiatTicker]).toFixed(8);
+			    return acc;
+		    }, {});
+	    };
+
+
+	    if(v2){
+		    result = {
+			    // BACKWARDS COMPAT! DONT REMOVE!
+			    'eos:eosio.token:eos':convertToMultiCurrency(EOS),
+			    'eth:eth:eth':convertToMultiCurrency(ETH),
+			    'trx:trx:trx':convertToMultiCurrency(TRX),
+
+
+			    'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906':convertToMultiCurrency(EOS),
+			    'eth:eth:eth:1':convertToMultiCurrency(ETH),
+			    'trx:trx:trx:1':convertToMultiCurrency(TRX),
+		    };
+
+	    } else {
+		    result = { EOS, ETH, TRX };
+	    }
+
+	    eosMainnetPrices.map(x => {
+		    const clone = JSON.parse(JSON.stringify(x))
+		    clone.price = parseFloat(parseFloat(EOS.price * x.price).toFixed(8));
+		    result[`eos:${x.contract}:${x.symbol}:${x.chainId}`.toLowerCase()] = convertToMultiCurrency(clone);
+	    })
+
+	    return result;
+    }
+
     static async watch(){
         clearInterval(priceInterval);
         return new Promise(async resolve => {
@@ -84,7 +137,8 @@ export default class PriceService {
                 for(let i = 0; i < networks.length; i++){
                     await fetchers[networks[i]]();
                 }
-                // await Promise.all(networks.map(net => PriceService[net]));
+
+                await PriceService.cacheTimeline();
 
                 resolve(true);
             };
@@ -96,30 +150,48 @@ export default class PriceService {
         })
     }
 
+    static async getPriceTimeline(id){
+    	return bucket.get(`prices:timeline:${id}`).then(x => {
+    		return x.value
+	    }).catch(err => {
+	    	console.log(err);
+	    	return {};
+	    })
+    }
 
+    static async cacheTimeline(){
+	    const id = dateId();
+	    const hour = hourNow();
 
+	    let pricesRaw = await this.getV2Prices(true, false);
+	    pricesRaw = Object.keys(pricesRaw).reduce((acc,x) => {
+	    	acc[x] = pricesRaw[x].price;
+	    	return acc;
+	    }, {});
+	    let prices = await this.getPriceTimeline(id);
+	    if(!prices || !pricesRaw) return;
 
+	    prices.latest = hour;
+	    prices[hour] = pricesRaw;
 
+	    return bucket.upsert(`prices:timeline:${id}`, prices);
+    }
 }
 
 
 const fetchers = {
 	[PRICE_NETS.MAIN]:async () => {
+		const SYMBOLS = 'BTC,TRX,ETH,EOS'
 		const prices = await Promise.race([
 			new Promise(resolve => setTimeout(() => resolve(false), 2500)),
-			fetch('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest', {
-				headers: { 'X-CMC_PRO_API_KEY': cmcKey },
-				json: true,
-				gzip: true
-			}).then(x => x.json()).then(res => {
-				return res.data.map(token => {
-					const {circulating_supply, max_supply, total_supply, symbol, name, quote} = token;
-					let {volume_24h, price} = quote.USD;
-					price = parseFloat(price).toFixed(2);
+			fetch(`https://min-api.cryptocompare.com/data/pricemulti?fsyms=${SYMBOLS}&tsyms=USD&api_key=${COMPARE_KEY}`)
+			.then(x => x.json())
+			.then(res => {
+				return Object.keys(res).map(symbol => {
 					return {
 						symbol,
-						name,
-						price
+						name:symbol,
+						price:res[symbol].USD
 					};
 				}).reduce((acc, x) => {
 					acc[x.symbol] = x;
@@ -129,6 +201,28 @@ const fetchers = {
 				console.log(err);
 				return null;
 			})
+			// fetch('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest', {
+			// 	headers: { 'X-CMC_PRO_API_KEY': cmcKey },
+			// 	json: true,
+			// 	gzip: true
+			// }).then(x => x.json()).then(res => {
+			// 	return res.data.map(token => {
+			// 		const {circulating_supply, max_supply, total_supply, symbol, name, quote} = token;
+			// 		let {volume_24h, price} = quote.USD;
+			// 		price = parseFloat(price).toFixed(2);
+			// 		return {
+			// 			symbol,
+			// 			name,
+			// 			price
+			// 		};
+			// 	}).reduce((acc, x) => {
+			// 		acc[x.symbol] = x;
+			// 		return acc;
+			// 	}, {});
+			// }).catch(err => {
+			// 	console.log(err);
+			// 	return null;
+			// })
 		]);
 
 		return cachePrices(PRICE_NETS.MAIN, prices);

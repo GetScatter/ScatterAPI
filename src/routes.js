@@ -3,7 +3,7 @@ import Blockchains from './util/blockchains';
 
 import TransactionService, {PAYMENT_ACCOUNTS} from "./services/TransactionService";
 
-import PriceService, {PRICE_NETS} from './services/PriceService';
+import PriceService, {PRICE_NETS, CURRENCIES} from './services/PriceService';
 import AppService from "./services/AppService";
 import ExplorerService from "./services/ExplorerService";
 import FiatService from "./services/FiatService";
@@ -15,6 +15,7 @@ import LanguageService from "./services/LanguageService";
 import ExchangeService from "./services/ExchangeService";
 
 import couchbase from './database/couchbase'
+import {dateId} from "./util/dates";
 
 const bucket = couchbase('scatter');
 
@@ -67,55 +68,26 @@ const senderIp = req => req.headers['x-forwarded-for'] || req.connection.remoteA
 /*             PRICES AND EXCHANGE              */
 /*                                              */
 /************************************************/
-const CURRENCIES = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'CAD', 'CHF', 'AUD'];
 
 routes.get('/currencies', (req, res) => res.json(CURRENCIES));
+routes.get('/currencies/prices', async (req, res) => {
+	let prices = await FiatService.getConversions();
+	if(!prices) return res.json(null);
+	prices = CURRENCIES.reduce((acc,symbol) => {
+		acc[symbol] = prices[symbol];
+		return acc;
+	}, {});
+	res.json(prices)
+});
 
 routes.get('/prices', async (req, res) => {
 	const {v2} = req.query;
-	const prices = await PriceService.getPrices();
-	const {EOS, ETH, TRX} = prices[PRICE_NETS.MAIN];
-	const eosMainnetPrices = prices[PRICE_NETS.EOS_MAINNET];
+	res.json(await PriceService.getV2Prices(v2));
+});
 
-	let result;
-
-	if(v2){
-		let conversions = await FiatService.getConversions();
-		conversions = CURRENCIES.reduce((acc,tick) => {
-			acc[tick] = conversions[tick];
-			return acc;
-		}, {});
-
-		const convertToMultiCurrency = x => {
-			return Object.keys(conversions).reduce((acc,fiatTicker) => {
-				acc[fiatTicker] = parseFloat(x.price * conversions[fiatTicker]).toFixed(8);
-				return acc;
-			}, {});
-		};
-
-		result = {
-			// BACKWARDS COMPAT! DONT REMOVE!
-			'eos:eosio.token:eos':convertToMultiCurrency(EOS),
-			'eth:eth:eth':convertToMultiCurrency(ETH),
-			'trx:trx:trx':convertToMultiCurrency(TRX),
-
-
-			'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906':convertToMultiCurrency(EOS),
-			'eth:eth:eth:1':convertToMultiCurrency(ETH),
-			'trx:trx:trx:1':convertToMultiCurrency(TRX),
-		};
-
-		eosMainnetPrices.map(x => {
-			const clone = JSON.parse(JSON.stringify(x))
-			clone.price = EOS.price * x.price;
-			result[`eos:${x.contract}:${x.symbol}:${x.chainId}`.toLowerCase()] = convertToMultiCurrency(clone);
-		})
-
-	} else {
-		result = { EOS, ETH, TRX };
-	}
-
-	res.json(result);
+routes.get('/prices/timeline', async (req, res) => {
+	const date = req.query.date ? req.query.date : dateId();
+	res.json(await PriceService.getPriceTimeline(date));
 });
 
 routes.get('/prices/:blockchain/:chainId', async (req, res) => {
@@ -124,18 +96,18 @@ routes.get('/prices/:blockchain/:chainId', async (req, res) => {
 });
 
 routes.post('/exchange/pairs', async (req, res) => {
-	const {symbol, other} = req.body;
+	const {token, other} = req.body;
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
-	const pairs = await exchange.pairs(symbol,other);
+	const pairs = await exchange.pairs(token, other);
 	res.json(pairs);
 });
 
 routes.post('/exchange/rate', async (req, res) => {
-	const {symbol, other} = req.body;
+	const {token, other, service} = req.body;
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
-	const rates = await exchange.rate(symbol,other);
+	const rates = await exchange.rate(token,other,service);
 	res.json(rates);
 });
 
@@ -161,7 +133,6 @@ routes.post('/exchange/order', async (req, res) => {
 	const refund = accountToExchangeAccount(from);
 	const destination = accountToExchangeAccount(to);
 
-	//fromSymbol, toSymbol, amount, from, to
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
 	const order = await exchange.createOrder(symbol,other, amount, refund, destination);

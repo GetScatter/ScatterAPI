@@ -16,12 +16,14 @@
   "scripts": {
     "prestart": "npm run -s build",
     "prod": "node dist/index.js",
-    "start": "nodemon src/index.js --exec \"node -r dotenv/config -r babel-register\"",
+    "pre-start": "rimraf -p",
+    "start": "npm run pre-start && nodemon src/index.js --exec \"node -r dotenv/config -r babel-register\"",
     "clean": "rimraf dist",
     "build": "npm run clean && mkdir -p dist && babel src -s -D -d dist",
     "routetest": "jest --watch",
     "testfile": "mocha --require babel-core/register --exit --timeout 1000000",
-    "test": "npm run testfile \"test/**/*.spec.js\" --timeout 1000000"
+    "test": "npm run testfile \"test/**/*.spec.js\" --timeout 1000000",
+    "crash": "kill-port 6546"
   },
   "dependencies": {
     "aes-oop": "^1.0.4",
@@ -52,6 +54,7 @@
     "chai": "^4.2.0",
     "dotenv": "^4.0.0",
     "jest": "^21.2.1",
+    "killport": "^1.0.1",
     "mocha": "^5.2.0",
     "nodemon": "^1.12.1",
     "supertest": "^3.0.0"
