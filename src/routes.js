@@ -112,30 +112,10 @@ routes.post('/exchange/rate', async (req, res) => {
 });
 
 routes.post('/exchange/order', async (req, res) => {
-	const {symbol, other, amount, from, to} = req.body;
-
-	const accountToExchangeAccount = acc => {
-		const blockchainAddress = () => {
-			switch (acc.blockchain) {
-				case 'eos': return acc.name;
-				case 'eth':
-				case 'trx':
-					return acc.address;
-			}
-		};
-
-		return {
-			address:blockchainAddress(),
-			tag:acc.hasOwnProperty('memo') && acc.memo && acc.memo.length ? acc.memo : null
-		}
-	};
-
-	const refund = accountToExchangeAccount(from);
-	const destination = accountToExchangeAccount(to);
-
+	const {service, token, other, amount, from, to} = req.body;
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
-	const order = await exchange.createOrder(symbol,other, amount, refund, destination);
+	const order = await exchange.createOrder(service, token, other, amount, from, to);
 
 	res.json(order);
 });
@@ -147,6 +127,18 @@ routes.get('/exchange/order/:order', async (req, res) => {
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
 	res.json(await exchange.getOrder(order));
+})
+
+routes.get('/exchange/cancelled/:order', async (req, res) => {
+	const order = req.params.order;
+	if(!order) return res.json(null);
+	res.json(await ExchangeService.cancelled(order));
+})
+
+routes.get('/exchange/accepted/:order', async (req, res) => {
+	const order = req.params.order;
+	if(!order) return res.json(null);
+	res.json(await ExchangeService.accepted(order));
 })
 
 

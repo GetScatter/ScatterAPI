@@ -9,7 +9,13 @@ const bucket = couchbase('exchange');
 const SERVICES = {
 	COINSWITCH:'coinswitch',
 	NEWDEX:'newdex',
-}
+};
+
+const TYPES = {
+	EXCHANGE:'Exchange Service',
+	DEX:'Decentralized Exchange',
+	ATOMIC:'Atomic Swap',
+};
 
 const isEos = token => token.blockchain === 'eos'
 	&& token.contract === 'eosio.token'
@@ -96,6 +102,7 @@ export default class ExchangeService {
 		        .then(res => res.filter(x => x.isActive))
 		        .then(res => res.map(x => ({
 			        service:SERVICES.COINSWITCH,
+			        type:TYPES.EXCHANGE,
 			        id:x.destinationCoin,
 			        symbol:x.destinationCoin.toUpperCase(),
 		        })))
@@ -104,29 +111,38 @@ export default class ExchangeService {
 		        	return []
 		        });
 
-	        const ACCEPTABLE = ['TRX', 'EOS', 'ETH', 'BTC', 'USDT'];
-	        allPairs = allPairs.filter(x => ACCEPTABLE.includes(x.symbol));
+	        const STABLECOINS = ['USDC', 'TUSD', 'PAX', 'DAI'] //'USDT' <-- Don't add this, their USDT is omni
+	        const BASECOINS = ['TRX', 'EOS', 'ETH', 'BTC'];
+	        allPairs = allPairs.filter(x => BASECOINS.includes(x.symbol) || STABLECOINS.includes(x.symbol));
+	        allPairs = allPairs.map(x => {
+	        	return Object.assign(x, {
+	        		blockchain: BASECOINS.includes(x.symbol) ? x.symbol.toLowerCase()
+				       : STABLECOINS.includes(x.symbol) ? 'eth' : null,
+		        })
+	        })
         }
 
-        if(canUseNewDex(token)){
-        	let pairs = await this.get(`tickers`, newDexApi)
-		        .then(res => res.map(x => ({
-			        service:SERVICES.NEWDEX,
-			        id:x.symbol,
-			        symbol:x.currency.toUpperCase(),
-		        })))
-		        .catch(err => {
-			        return []
-		        });
-
-        	if(!isEos(token)){
-        		pairs = pairs.filter(x => x.symbol.toLowerCase() === 'eos');
-	        } else {
-		        pairs = pairs.filter(x => x.symbol.toLowerCase() !== 'eos');
-	        }
-
-        	allPairs = allPairs.concat(pairs);
-        }
+        // if(canUseNewDex(token)){
+        // 	let pairs = await this.get(`tickers`, newDexApi)
+		//         .then(res => res.map(x => ({
+		// 	        service:SERVICES.NEWDEX,
+		// 	        type:TYPES.DEX,
+		// 	        id:x.symbol,
+		// 	        symbol:x.currency.toUpperCase(),
+	    //          blockchain:'eos',
+		//         })))
+		//         .catch(err => {
+		// 	        return []
+		//         });
+		//
+        // 	if(!isEos(token)){
+        // 		pairs = pairs.filter(x => x.symbol.toLowerCase() === 'eos');
+	    //     } else {
+		//         pairs = pairs.filter(x => x.symbol.toLowerCase() !== 'eos');
+	    //     }
+		//
+        // 	allPairs = allPairs.concat(pairs);
+        // }
 
 	    return allPairs;
     }
@@ -148,12 +164,9 @@ export default class ExchangeService {
 				    });
 
 		    case SERVICES.NEWDEX:
-		    	const eosId = `eosio.token-eos-eusd`;
 		    	const tokenId = isEos(token) ? toSymbol : `${token.contract}-${token.symbol}-eos`.toLowerCase();
-		    	const eosPrice = eosId === tokenId ? 1 : await this.get(`price?symbol=${eosId}`, newDexApi).then(x => x.price).catch(() => null);
 			    return this.get(`price?symbol=${tokenId}`, newDexApi)
 				    .then(x => {
-				    	console.log('x', x, tokenId);
 				    	return {
 						    rate:(isEos(token) ? 1 / x.price : x.price),
 						    min:null,
@@ -173,26 +186,74 @@ export default class ExchangeService {
 
     }
 
-    async createOrder(fromSymbol, toSymbol, amount, from, to){
-        const data = {
-	        depositCoin:fromSymbol.toLowerCase(),
-	        destinationCoin:toSymbol.toLowerCase(),
-	        depositCoinAmount:amount,
-	        destinationAddress:to,
-	        refundAddress:from,
-        };
+    async createOrder(service, token, toSymbol, amount, from, to){
 
-        const order = await this.post(`order`, data).catch(err => {
-	        console.error('EXCHANGE ERR: ', err);
-	        return null;
-        });
 
-	    if(order) await bucket.upsert(`order:${order.orderId}`, {order, data});
-	    return order;
+	    switch(service){
+		    case SERVICES.COINSWITCH:
+
+			    const accountToExchangeAccount = acc => ({
+				    address:acc.account,
+				    tag:acc.hasOwnProperty('memo') && acc.memo && acc.memo.length ? acc.memo : null
+			    });
+
+			    const refundAddress = accountToExchangeAccount(from);
+			    const destinationAddress = accountToExchangeAccount(to);
+
+			    const fromSymbol = token.symbol;
+			    const data = {
+				    depositCoin:fromSymbol.toLowerCase(),
+				    destinationCoin:toSymbol.toLowerCase(),
+				    depositCoinAmount:amount,
+				    destinationAddress,
+				    refundAddress,
+			    };
+
+			    const order = await this.post(`order`, data).then(res => {
+			    	return {
+					    id:res.orderId,
+					    account:res.exchangeAddress.address,
+					    memo:res.exchangeAddress.tag,
+					    deposit:res.expectedDepositCoinAmount,
+					    expected:res.expectedDestinationCoinAmount,
+				    }
+			    }).catch(err => {
+				    console.error('EXCHANGE ERR: ', err);
+				    return null;
+			    });
+
+			    delete token.id;
+			    if(order) await bucket.upsert(`order:${order.id}`, {order, service, from:token, to:toSymbol, accepted:false});
+			    return order;
+
+		    case SERVICES.NEWDEX:
+
+
+	    }
+
+
+
+
+
     }
 
-    getOrder(orderId){
-        return this.get(`order/${orderId}`);
+    async getOrder(orderId){
+    	const updated = await this.get(`order/${orderId}`).catch(() => null);
+    	const original = await bucket.get(`order:${orderId}`).then(x => x.value).catch(() => null);
+    	console.log('updated', updated, original);
+        return {updated, original};
+    }
+
+    static async cancelled(orderId){
+    	await bucket.remove(`order:${orderId}`).then(x => x.value).catch(() => null);
+        return true;
+    }
+
+    static async accepted(orderId){
+	    const original = await bucket.get(`order:${orderId}`).then(x => x.value).catch(() => null);
+	    original.accepted = true;
+	    await bucket.upsert(`order:${orderId}`, original);
+        return true;
     }
 
 }
