@@ -16,6 +16,7 @@ import ExchangeService from "./services/ExchangeService";
 
 import couchbase from './database/couchbase'
 import {dateId} from "./util/dates";
+import ReflinkService from "./services/ReflinkService";
 
 const bucket = couchbase('scatter');
 
@@ -151,9 +152,9 @@ routes.get('/exchange/accepted/:order', async (req, res) => {
 
 routes.get('/explorers', async (req, res) => {
 	const {flat} = req.query;
-	let apps = await ExplorerService.getApps();
-	if(flat) apps = flattenBlockchainObject(apps);
-	res.json(apps);
+	let explorers = await ExplorerService.getApps();
+	if(flat) explorers = flattenBlockchainObject(explorers);
+	res.json(explorers);
 });
 
 routes.get('/proxies', async (req, res) => {
@@ -170,15 +171,23 @@ routes.get('/languages', async (req, res) => {
 
 routes.get('/networks', async (req, res) => {
 	const {flat} = req.query;
-	let apps = await NetworkService.getNetworks();
-	if(flat) apps = flattenBlockchainObject(apps);
-	res.json(apps);
+	let networks = await NetworkService.getNetworks();
+	if(flat) networks = flattenBlockchainObject(networks);
+	res.json(networks);
 });
 
 routes.get('/apps', async (req, res) => {
 	const {flat} = req.query;
 	let apps = await AppService.getApps();
-	if(flat) apps = flattenBlockchainObject(apps);
+	if(flat) {
+		apps = flattenBlockchainObject(apps);
+		apps = apps.map(app => {
+			const a = JSON.parse(JSON.stringify(app));
+			a.url = ReflinkService.withRefLink(a.url, a.applink);
+			return a;
+		});
+	}
+
 	res.json(apps);
 });
 

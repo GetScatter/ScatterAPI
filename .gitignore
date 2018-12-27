@@ -59,6 +59,7 @@ typings/
 
 # dotenv environment variables file
 .env
+reflinks.json
 
 # Custom
 .idea
