@@ -23,7 +23,7 @@
     "routetest": "jest --watch",
     "testfile": "mocha --require babel-core/register --exit --timeout 1000000",
     "test": "npm run testfile \"test/**/*.spec.js\" --timeout 1000000",
-    "crash": "kill-port 6546"
+    "crash": "kill-port 6544"
   },
   "dependencies": {
     "aes-oop": "^1.0.4",
@@ -54,6 +54,7 @@
     "chai": "^4.2.0",
     "dotenv": "^4.0.0",
     "jest": "^21.2.1",
+    "kill-port": "^1.3.2",
     "killport": "^1.0.1",
     "mocha": "^5.2.0",
     "nodemon": "^1.12.1",
