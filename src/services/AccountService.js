@@ -12,17 +12,17 @@ const keyProvider = config('ACCOUNT_CREATOR_KEY');
 
 let eosInstance;
 
-// const getNewEosInstance = () => Eos({
-// 	httpEndpoint:`https://nodes.get-scatter.com`,
-// 	chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
-//     keyProvider
-// });
-
 const getNewEosInstance = () => Eos({
-	httpEndpoint:`http://192.168.1.9:8888`,
-	chainId:'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
+	httpEndpoint:`https://nodes.get-scatter.com`,
+	chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
     keyProvider
 });
+
+// const getNewEosInstance = () => Eos({
+// 	httpEndpoint:`http://192.168.1.9:8888`,
+// 	chainId:'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
+//     keyProvider
+// });
 
 const getEos = async (attempts = 0) => {
     if(!eosInstance) eosInstance = getNewEosInstance();
