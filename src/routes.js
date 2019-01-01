@@ -242,6 +242,39 @@ routes.post('/create_eos', async (req, res) => {
 	res.json({created});
 });
 
+routes.post('/create_bridge', async (req, res) => {
+	const defaultError = {error:'There was an error creating the account. Please try again later.'};
+	const {signature, key, name, machineId, free} = req.body;
+	const ip = senderIp(req);
+
+	if(!key || !key.length) return res.json({error:'Invalid Key'});
+
+	if(free){
+		if(machineId.length !== 64) return res.json({error:'Bad Machine ID.'});
+		if(await AccountService.checkMachineId(machineId)) return res.json({error:'One free account per user.'});
+		if(await AccountService.checkIp(ip)) return res.json({error:'One free account per user.'});
+		if(!await AccountService.proveSignature(signature, key, AccountService.sha256(key+machineId+name))) return res.json({error:'Signature does not match key.'});
+
+		const created = await AccountService.createBridgeAccount(name, key, true);
+		if(created && !created.hasOwnProperty('error')) await AccountService.logCreation(ip, machineId);
+		return res.json(created);
+	} else {
+		const canCreate = await AccountService.canCreateBridge(key, signature);
+		if(canCreate !== true) return res.json(canCreate);
+
+		const created = await AccountService.createBridgeAccount(name, key);
+		return res.json(created);
+	}
+});
+
+routes.get('/machine/:id', async (req, res) => {
+	const {id} = req.params;
+	const ip = senderIp(req);
+	if(await AccountService.checkMachineId(id)) return res.json(false);
+	if(await AccountService.checkIp(ip)) return res.json(false);
+	res.json(true);
+});
+
 
 
 routes.all('*', (req, res) => res.sendStatus(403));

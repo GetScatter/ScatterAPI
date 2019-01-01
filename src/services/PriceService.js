@@ -154,7 +154,7 @@ export default class PriceService {
     	return bucket.get(`prices:timeline:${id}`).then(x => {
     		return x.value
 	    }).catch(err => {
-	    	console.log(err);
+	    	console.error(err);
 	    	return {};
 	    })
     }
@@ -198,31 +198,9 @@ const fetchers = {
 					return acc;
 				}, {});
 			}).catch(err => {
-				console.log(err);
+				console.error(err);
 				return null;
 			})
-			// fetch('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest', {
-			// 	headers: { 'X-CMC_PRO_API_KEY': cmcKey },
-			// 	json: true,
-			// 	gzip: true
-			// }).then(x => x.json()).then(res => {
-			// 	return res.data.map(token => {
-			// 		const {circulating_supply, max_supply, total_supply, symbol, name, quote} = token;
-			// 		let {volume_24h, price} = quote.USD;
-			// 		price = parseFloat(price).toFixed(2);
-			// 		return {
-			// 			symbol,
-			// 			name,
-			// 			price
-			// 		};
-			// 	}).reduce((acc, x) => {
-			// 		acc[x.symbol] = x;
-			// 		return acc;
-			// 	}, {});
-			// }).catch(err => {
-			// 	console.log(err);
-			// 	return null;
-			// })
 		]);
 
 		return cachePrices(PRICE_NETS.MAIN, prices);
@@ -237,7 +215,7 @@ const fetchers = {
 			}).then(x => x.json()).then(res => res.data ? res.data.map(({change, contract, currency:symbol, last:price}) => ({
 				contract, symbol, price, chainId:PRICE_NETS.EOS_MAINNET.replace('prices:eos:', '')
 			})).filter(x => x.contract !== 'eosio.token') : null).catch(err => {
-				console.log(err);
+				console.error(err);
 				return null;
 			})
 		]);

@@ -2,6 +2,7 @@ import "isomorphic-fetch"
 import config from '../util/config'
 import Eos from 'eosjs';
 const {ecc} = Eos.modules;
+const murmur = require('murmurhash');
 
 let bucket;
 const transactionKey = id => `tx:${id}`;
@@ -9,12 +10,17 @@ const transactionKey = id => `tx:${id}`;
 const creator = config('ACCOUNT_CREATOR_NAME');
 const keyProvider = config('ACCOUNT_CREATOR_KEY');
 
-
 let eosInstance;
 
+// const getNewEosInstance = () => Eos({
+// 	httpEndpoint:`https://nodes.get-scatter.com`,
+// 	chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
+//     keyProvider
+// });
+
 const getNewEosInstance = () => Eos({
-	httpEndpoint:`https://nodes.get-scatter.com`,
-	chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
+	httpEndpoint:`http://192.168.1.9:8888`,
+	chainId:'cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f',
     keyProvider
 });
 
@@ -39,16 +45,81 @@ export default class AccountService {
         bucket = _b;
     }
 
-    static async createEosAccount(name, keys, leftForResources, paymentTx, signature){
-    	try {
-		    if(!ecc.recover(signature, keys.active)){
-			    console.error('Signature did not match: ', paymentTx);
-			    return false;
-		    }
+    static async checkMachineId(machineId){
+    	if(!machineId || !machineId.length) return true;
+    	return bucket.exists(`machine:${machineId}`).catch(() => true);
+    }
+
+    static async checkIp(ip){
+    	if(!ip || !ip.length) return true;
+    	return bucket.exists(`ip:${ip}`).catch(() => true);
+    }
+
+    static async logCreation(ip, machineId){
+	    await bucket.insert(`machine:${machineId}`, {}).catch(() => true);
+	    await bucket.insert(`ip:${ip}`, {}).catch(() => true);
+	    return true;
+    }
+
+    static sha256(data){
+    	return ecc.sha256(data);
+    }
+
+    static async getBridgeBalance(publicKey){
+	    const eos = await getEos();
+	    if(!eos) return null;
+	    return eos.getTableRows({
+		    json:true,
+		    code:'createbridge',
+		    scope:'createbridge',
+		    table:'balances',
+		    lower_bound:murmur.v2(publicKey),
+		    upper_bound:murmur.v2(publicKey)+1
+	    }).then(res => res.rows[0]).catch(() => null);
+    }
+
+    static proveSignature(signature, key, hash = null){
+	    try {
+	    	return key === hash ? ecc.recoverHash(signature, key) : ecc.recover(signature, key);
 	    } catch(e){
-		    console.error('Signature did not match: ', paymentTx);
-    		return false;
+		    console.error('Signature did not match: ', key);
+		    return false;
 	    }
+    }
+
+    static async canCreateBridge(publicKey, signature){
+    	// Proving balance existence
+    	const balance = await this.getBridgeBalance(publicKey);
+    	if(!balance) return {error:"Could not find any balance for this public key"};
+
+    	// Proving ownership of balance
+	    if(!this.proveSignature(signature, this.sha256(publicKey)))
+		    return {error:"Signature did not match public key"};
+
+	    // Proving irreversibility
+    	const now = +new Date();
+    	const irreversibleTime = +new Date((balance.timestamp*1000) + (1000*60*3.2));
+    	if(now < irreversibleTime)
+    		return {error:"Transaction is not yet irreversible."};
+
+    	return true;
+    }
+
+	static async createBridgeAccount(name, key, free = false){
+		const eos = await getEos();
+		if(!eos) return null;
+		const contract = await eos.contract('createbridge');
+		if(!contract) return null;
+		return await contract.create(key, name, key, free ? "get-scatter.com" : key, {authorization:`createbridge@active`})
+			.then(async () => true)
+			.catch(err => {
+				console.error('Bridge creation error', JSON.parse(err).error.what);
+				return {error:JSON.parse(err).error.what};
+			});
+	}
+
+    static async createEosAccount(name, keys, leftForResources, paymentTx, signature){
+    	if(!this.proveSignature(signature, keys.active)) return false;
 
     	if(await bucket.exists(transactionKey(paymentTx))){
     		console.error('Tried to create another account: ', paymentTx, name);

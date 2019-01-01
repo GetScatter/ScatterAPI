@@ -1,7 +1,7 @@
 export const dateId = () => {
 	const d = new Date();
-	const date = d.getDate();
-	const month = d.getMonth()+1;
+	const date = d.getUTCDate();
+	const month = d.getUTCMonth()+1;
 	const year = d.getFullYear();
 	return `${date}-${month}-${year}`;
 };

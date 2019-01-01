@@ -107,7 +107,7 @@ export default class ExchangeService {
 			        symbol:x.destinationCoin.toUpperCase(),
 		        })))
 		        .catch(err => {
-		        	console.log(err);
+		        	console.error(err);
 		        	return []
 		        });
 
@@ -174,7 +174,7 @@ export default class ExchangeService {
 					    }
 				    })
 				    .catch(err => {
-				    	console.log('err', err);
+				    	console.error('err', err);
 					    return null
 				    });
 
@@ -240,7 +240,6 @@ export default class ExchangeService {
     async getOrder(orderId){
     	const updated = await this.get(`order/${orderId}`).catch(() => null);
     	const original = await bucket.get(`order:${orderId}`).then(x => x.value).catch(() => null);
-    	console.log('updated', updated, original);
         return {updated, original};
     }
 

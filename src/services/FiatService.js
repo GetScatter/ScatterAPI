@@ -58,7 +58,7 @@ export default class FiatService {
 			}).then(x => x.json()).then(res => {
 				return res.rates;
 			}).catch(err => {
-				console.log(err);
+				console.error(err);
 				return null;
 			})
 		])

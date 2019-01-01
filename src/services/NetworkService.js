@@ -68,7 +68,7 @@ export default class NetworkService {
             }).then(x => x.json()).then(res => {
                 return res;
             }).catch(err => {
-                console.log(err);
+                console.error(err);
                 return null;
             })
         ])
