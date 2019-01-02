@@ -142,6 +142,13 @@ routes.get('/exchange/accepted/:order', async (req, res) => {
 	res.json(await ExchangeService.accepted(order));
 })
 
+routes.get('/exchange/stabilize/paths', async (req, res) => {
+	res.json({
+		'from':['eth:eth:eth:1', 'trx:trx:trx:1', 'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906'],
+		'to':['USDC', 'TUSD']
+	})
+});
+
 
 
 /************************************************/
