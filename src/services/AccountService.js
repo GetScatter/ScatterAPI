@@ -180,7 +180,7 @@ export default class AccountService {
         const ramPrice = await AccountService.getRamPrice(eos);
         if(!ramPrice) return null;
 
-        return ((ramPrice * 4096) + 1).toFixed(4);
+        return ((ramPrice * 4096) + 0.8).toFixed(4);
     }
 
 	static async getRamPrice(eos){
