@@ -17,6 +17,8 @@ const TYPES = {
 	ATOMIC:'Atomic Swap',
 };
 
+const STABLECOINS = ['USDC', 'TUSD', 'PAX', 'DAI'] //'USDT' <-- Don't add this, their USDT is omni
+
 const isEos = token => token.blockchain === 'eos'
 	&& token.contract === 'eosio.token'
 	&& token.symbol.toLowerCase() === 'eos'
@@ -37,6 +39,7 @@ const canUseCoinSwitch = token => {
 	if(isEos(token)) return true;
 	if(isEth(token)) return true;
 	if(isTrx(token)) return true;
+	if(STABLECOINS.includes(token.symbol)) return true;
 	return false;
 };
 
@@ -111,7 +114,6 @@ export default class ExchangeService {
 		        	return []
 		        });
 
-	        const STABLECOINS = ['USDC', 'TUSD', 'PAX', 'DAI'] //'USDT' <-- Don't add this, their USDT is omni
 	        const BASECOINS = ['TRX', 'EOS', 'ETH', 'BTC'];
 	        allPairs = allPairs.filter(x => BASECOINS.includes(x.symbol) || STABLECOINS.includes(x.symbol));
 	        allPairs = allPairs.map(x => {
