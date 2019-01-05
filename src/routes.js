@@ -17,6 +17,8 @@ import ExchangeService from "./services/ExchangeService";
 import couchbase from './database/couchbase'
 import {dateId} from "./util/dates";
 import ReflinkService from "./services/ReflinkService";
+import config from "./util/config";
+import * as ecc from "eosjs-ecc";
 
 const bucket = couchbase('scatter');
 
@@ -62,6 +64,15 @@ const routes = Router();
 
 const senderIp = req => req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
+const proofKey = config('PROOF_KEY');
+const returnResult = (data, req, res) => {
+	let {proof} = req.headers;
+	if(proof && proof.length === 64){
+		proof = ecc.sign(proof, proofKey);
+		res.append('proof', proof);
+	}
+	res.json(data);
+};
 
 
 /************************************************/
@@ -69,84 +80,78 @@ const senderIp = req => req.headers['x-forwarded-for'] || req.connection.remoteA
 /*             PRICES AND EXCHANGE              */
 /*                                              */
 /************************************************/
-
-routes.get('/currencies', (req, res) => res.json(CURRENCIES));
+routes.get('/currencies', (req, res) => returnResult(CURRENCIES, req, res));
 routes.get('/currencies/prices', async (req, res) => {
 	let prices = await FiatService.getConversions();
-	if(!prices) return res.json(null);
+	if(!prices) return returnResult(null, req, res);
 	prices = CURRENCIES.reduce((acc,symbol) => {
 		acc[symbol] = prices[symbol];
 		return acc;
 	}, {});
-	res.json(prices)
+	returnResult(prices, req, res);
 });
 
 routes.get('/prices', async (req, res) => {
 	const {v2} = req.query;
-	res.json(await PriceService.getV2Prices(v2));
+	returnResult(await PriceService.getV2Prices(v2), req, res)
 });
 
 routes.get('/prices/timeline', async (req, res) => {
 	const date = req.query.date ? req.query.date : dateId();
-	res.json(await PriceService.getPriceTimeline(date));
+	returnResult(await PriceService.getPriceTimeline(date), req, res);
 });
 
 routes.get('/prices/:blockchain/:chainId', async (req, res) => {
-
-	res.json(false);
+	returnResult(false, req, res);
 });
 
 routes.post('/exchange/pairs', async (req, res) => {
 	const {token, other} = req.body;
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
-	const pairs = await exchange.pairs(token, other);
-	res.json(pairs);
+	returnResult(await exchange.pairs(token, other), req, res);
 });
 
 routes.post('/exchange/rate', async (req, res) => {
 	const {token, other, service} = req.body;
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
-	const rates = await exchange.rate(token,other,service);
-	res.json(rates);
+	returnResult(await exchange.rate(token,other,service), req, res);
 });
 
 routes.post('/exchange/order', async (req, res) => {
 	const {service, token, other, amount, from, to} = req.body;
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
-	const order = await exchange.createOrder(service, token, other, amount, from, to);
-
-	res.json(order);
+	returnResult(await exchange.createOrder(service, token, other, amount, from, to), req, res);
 });
 
 routes.get('/exchange/order/:order', async (req, res) => {
 	const order = req.params.order;
-	if(!order) return res.json(null);
+	if(!order) return returnResult(null, req, res);
 
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
-	res.json(await exchange.getOrder(order));
+	returnResult(await exchange.getOrder(order), req, res);
 })
 
 routes.get('/exchange/cancelled/:order', async (req, res) => {
 	const order = req.params.order;
-	if(!order) return res.json(null);
-	res.json(await ExchangeService.cancelled(order));
+	if(!order) return returnResult(null, req, res);
+	returnResult(await ExchangeService.cancelled(order), req, res);
 })
 
 routes.get('/exchange/accepted/:order', async (req, res) => {
 	const order = req.params.order;
-	if(!order) return res.json(null);
-	res.json(await ExchangeService.accepted(order));
+	if(!order) return returnResult(null, req, res);
+	returnResult(await ExchangeService.accepted(order), req, res);
 })
 
 routes.get('/exchange/stabilize/paths', async (req, res) => {
-	res.json({
+	returnResult({
 		'from':['eth:eth:eth:1', 'trx:trx:trx:1', 'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906'],
 		'to':['USDC', 'TUSD']
-	})
+	}, req, res);
 });
 
 
@@ -161,26 +166,26 @@ routes.get('/explorers', async (req, res) => {
 	const {flat} = req.query;
 	let explorers = await ExplorerService.getApps();
 	if(flat) explorers = flattenBlockchainObject(explorers);
-	res.json(explorers);
+	returnResult(explorers, req, res);
 });
 
 routes.get('/proxies', async (req, res) => {
 	const {flat} = req.query;
 	let proxies = await ProxyService.getProxies();
 	if(flat) proxies = flattenBlockchainObject(proxies);
-	res.json(proxies);
+	returnResult(proxies, req, res);
 });
 
 routes.get('/languages', async (req, res) => {
 	const {names, name} = req.query;
-	res.json(await LanguageService.getLanguages(!!names, name));
+	returnResult(await LanguageService.getLanguages(!!names, name), req, res);
 });
 
 routes.get('/networks', async (req, res) => {
 	const {flat} = req.query;
 	let networks = await NetworkService.getNetworks();
 	if(flat) networks = flattenBlockchainObject(networks);
-	res.json(networks);
+	returnResult(networks, req, res);
 });
 
 routes.get('/apps', async (req, res) => {
@@ -195,15 +200,15 @@ routes.get('/apps', async (req, res) => {
 		});
 	}
 
-	res.json(apps);
+	returnResult(apps, req, res);
 });
 
 routes.post('/apps', async (req, res) => {
 	const {apps} = req.body;
 	let allApps = await AppService.getApps();
-	if(!apps || !apps.length) return res.json(allApps);
+	if(!apps || !apps.length) return returnResult(allApps, req, res);
 	const result = flattenBlockchainObject(allApps).filter(x => apps.includes(x.applink));
-	res.json(result)
+	returnResult(result, req, res);
 });
 
 
@@ -223,30 +228,29 @@ routes.post('/create_eos', async (req, res) => {
 	const {transaction_id, signature, keys, account_name} = req.body;
 
 	if(!keys.hasOwnProperty('active') || !keys.hasOwnProperty('owner') || !keys.active.length || !keys.owner.length){
-		return res.json({error:'Invalid keys'});
+		return returnResult({error:'Invalid keys'}, req, res);
 	}
 
 	const minimumCost = await AccountService.getAccountMinimumCost();
-	if(!minimumCost) return res.json(defaultError);
+	if(!minimumCost) return returnResult(defaultError, req, res);
 
 	const transactionStatus = await TransactionService.eos(transaction_id, minimumCost, PAYMENT_ACCOUNTS.EOS.NEW_ACCOUNT);
-	if(!transactionStatus || transactionStatus.hasOwnProperty('error')) return res.json(
-		transactionStatus.hasOwnProperty('error')
-			? {error:transactionStatus.error}
-			: {error:'The transaction could not be verified.'}
-	);
+	if(!transactionStatus || transactionStatus.hasOwnProperty('error')) return returnResult(transactionStatus.hasOwnProperty('error')
+		? {error:transactionStatus.error}
+		: {error:'The transaction could not be verified.'}, req, res);
+
 
 	const [quantity, memo] = transactionStatus;
 
 	const leftForResources = parseFloat(quantity - minimumCost).toFixed(4);
-	if(!leftForResources || leftForResources <= 0) return res.json({error:'There was not enough EOS left for resources.'});
+	if(!leftForResources || leftForResources <= 0) return returnResult({error:'There was not enough EOS left for resources.'}, req, res);
 
-	if(memo !== keys.active) return res.json({error:'The signature for account creation did not match the key from the exchange memo'});
+	if(memo !== keys.active) return returnResult({error:'The signature for account creation did not match the key from the exchange memo'}, req, res);
 
 	const created = await AccountService.createEosAccount(account_name, keys, leftForResources, transaction_id, signature);
-	if(!created) return res.json(defaultError);
+	if(!created) return returnResult(defaultError, req, res);
 
-	res.json({created});
+	returnResult({created}, req, res);
 });
 
 routes.post('/create_bridge', async (req, res) => {
@@ -254,32 +258,32 @@ routes.post('/create_bridge', async (req, res) => {
 	const {signature, key, name, machineId, free} = req.body;
 	const ip = senderIp(req);
 
-	if(!key || !key.length) return res.json({error:'Invalid Key'});
+	if(!key || !key.length) return returnResult({error:'Invalid Key'}, req, res);
 
 	if(free){
-		if(machineId.length !== 64) return res.json({error:'Bad Machine ID.'});
-		if(await AccountService.checkMachineId(machineId)) return res.json({error:'One free account per user.'});
-		if(await AccountService.checkIp(ip)) return res.json({error:'One free account per user.'});
-		if(!await AccountService.proveSignature(signature, key, AccountService.sha256(key+machineId+name))) return res.json({error:'Signature does not match key.'});
+		if(machineId.length !== 64) return returnResult({error:'Bad Machine ID.'}, req, res);
+		if(await AccountService.checkMachineId(machineId)) return returnResult({error:'One free account per user.'}, req, res);
+		if(await AccountService.checkIp(ip)) return returnResult({error:'One free account per user.'}, req, res);
+		if(!await AccountService.proveSignature(signature, key, AccountService.sha256(key+machineId+name))) return returnResult({error:'Signature does not match key.'}, req, res);
 
 		const created = await AccountService.createBridgeAccount(name, key, true);
 		if(created && !created.hasOwnProperty('error')) await AccountService.logCreation(ip, machineId);
-		return res.json(created);
+		returnResult(created, req, res);
 	} else {
 		const canCreate = await AccountService.canCreateBridge(key, signature);
-		if(canCreate !== true) return res.json(canCreate);
+		if(canCreate !== true) return returnResult(canCreate, req, res);
 
 		const created = await AccountService.createBridgeAccount(name, key);
-		return res.json(created);
+		return returnResult(created, req, res);
 	}
 });
 
 routes.get('/machine/:id', async (req, res) => {
 	const {id} = req.params;
 	const ip = senderIp(req);
-	if(await AccountService.checkMachineId(id)) return res.json(false);
-	if(await AccountService.checkIp(ip)) return res.json(false);
-	res.json(true);
+	if(await AccountService.checkMachineId(id)) return returnResult(false, req, res);
+	if(await AccountService.checkIp(ip)) return returnResult(false, req, res);
+	returnResult(true, req, res);
 });
 
 

@@ -9,7 +9,9 @@ const app = express();
 app.disable('x-powered-by');
 
 app.use(compression())
-app.use(cors());
+app.use(cors({
+	exposedHeaders: ['proof'],
+}));
 app.use(logger('dev', { skip: () => app.get('env') === 'test' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
