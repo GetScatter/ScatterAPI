@@ -155,6 +155,12 @@ routes.get('/exchange/stabilize/paths', async (req, res) => {
 	}, req, res);
 });
 
+routes.get('/exchange/pairable', async (req, res) => {
+	const ip = senderIp(req);
+	const exchange = new ExchangeService(ip);
+	returnResult(await exchange.pairable(), req, res);
+});
+
 
 
 /************************************************/

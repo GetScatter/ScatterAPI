@@ -113,6 +113,22 @@ export default class ExchangeService {
         return this.get('coins');
     }
 
+    async pairable(){
+
+	    const unique = t => `${t.blockchain}:${t.contract}:${t.symbol}:${t.chainId}`.toLowerCase();
+
+	    const bancorEosPairs = await this.get(`volume`, bancorEosApi)
+		    .then(async res => res.rows.map(x => (eosToken(x.from_token_code, x.from_token_account))))
+		    .catch(err => []);
+
+	    return BASETOKENS
+		    .concat(STABLETOKENS)
+		    .concat(bancorEosPairs)
+		    .map(unique)
+
+
+    }
+
     async pairs(token, toSymbol){
         if(!toSymbol) toSymbol = '';
 
@@ -297,9 +313,6 @@ export default class ExchangeService {
 		    const converter1 = pairFrom.converter_account;
 		    const converter2 = pairTo.converter_account;
 
-		    //{Amount}, {token pair converter account name} {token code}, {minimum return amount}, {your user account name}
-		    //1,bnt2eoscnvrt BNT,0.0404270258,localcoin111
-
 		    const id = `${fromAccount}:${toSymbol}:${toAccount}:${amount}:${+new Date()}`;
 
 		    const decimals = toSymbol.toUpperCase() === 'IQ' ? 3 : 4;
@@ -321,11 +334,6 @@ export default class ExchangeService {
 		    return order;
 
 	    }
-
-
-
-
-
     }
 
     async getOrder(orderId){
