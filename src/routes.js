@@ -12,7 +12,7 @@ import AccountService from "./services/AccountService";
 import NetworkService from "./services/NetworkService";
 import LanguageService from "./services/LanguageService";
 // import BackupService from './services/BackupService';
-import ExchangeService from "./services/ExchangeService";
+import ExchangeService, {STABLETOKENS,BASETOKENS} from "./services/ExchangeService";
 
 import couchbase from './database/couchbase'
 import {dateId} from "./util/dates";
@@ -148,9 +148,10 @@ routes.get('/exchange/accepted/:order', async (req, res) => {
 })
 
 routes.get('/exchange/stabilize/paths', async (req, res) => {
+	const unique = t => `${t.blockchain}:${t.contract}:${t.symbol}:${t.chainId}`.toLowerCase();
 	returnResult({
-		'from':['eth:eth:eth:1', 'trx:trx:trx:1', 'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906'],
-		'to':['USDC', 'TUSD']
+		'from':BASETOKENS.concat(STABLETOKENS).map(unique),
+		'to':STABLETOKENS
 	}, req, res);
 });
 

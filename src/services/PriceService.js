@@ -2,6 +2,7 @@ import "isomorphic-fetch"
 import config from '../util/config'
 import FiatService from "./FiatService";
 import {dateId, daysOld, hourNow} from "../util/dates";
+import {STABLETOKENS} from "./ExchangeService";
 
 const intervalTime = 60000 * 15;
 let priceInterval;
@@ -17,7 +18,8 @@ let pricesInRam = {};
 
 export const PRICE_NETS = {
     MAIN:'prices',
-    EOS_MAINNET:'prices:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906'
+    EOS_MAINNET:'prices:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
+    ETH_MAINNET:'prices:eth:1'
 }
 
 const networks = Object.keys(PRICE_NETS).map(x => PRICE_NETS[x]);
@@ -82,6 +84,7 @@ export default class PriceService {
 	    const prices = await PriceService.getPrices();
 	    const {EOS, ETH, TRX} = prices[PRICE_NETS.MAIN];
 	    const eosMainnetPrices = prices[PRICE_NETS.EOS_MAINNET];
+	    const ethMainnetPrices = prices[PRICE_NETS.ETH_MAINNET];
 
 	    let result;
 
@@ -122,6 +125,11 @@ export default class PriceService {
 		    const clone = JSON.parse(JSON.stringify(x))
 		    clone.price = parseFloat(parseFloat(EOS.price * x.price).toFixed(8));
 		    result[`eos:${x.contract}:${x.symbol}:${x.chainId}`.toLowerCase()] = convertToMultiCurrency(clone);
+	    })
+
+	    ethMainnetPrices.map(x => {
+		    const clone = JSON.parse(JSON.stringify(x))
+		    result[`eth:${x.contract}:${x.symbol}:1`.toLowerCase()] = convertToMultiCurrency(clone);
 	    })
 
 	    return result;
@@ -221,6 +229,33 @@ const fetchers = {
 		]);
 
 		return cachePrices(PRICE_NETS.EOS_MAINNET, prices);
+	},
+
+	[PRICE_NETS.ETH_MAINNET]:async () => {
+		const prices = await Promise.race([
+			new Promise(resolve => setTimeout(() => resolve(false), 2500)),
+			fetch('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest', {
+				headers: { 'X-CMC_PRO_API_KEY': cmcKey },
+				json: true,
+				gzip: true
+			}).then(x => x.json()).then(res => {
+				return res.data.filter(x => STABLETOKENS.find(t => t.symbol === x.symbol.toUpperCase())).map(token => {
+					const {circulating_supply, max_supply, total_supply, symbol, name, quote} = token;
+					let {volume_24h, price} = quote.USD;
+					return {
+						symbol,
+						name:symbol,
+						contract:STABLETOKENS.find(t => t.symbol === symbol.toUpperCase()).contract,
+						price
+					};
+				});
+			}).catch(err => {
+				console.log(err);
+				return null;
+			})
+		]);
+
+		return cachePrices(PRICE_NETS.ETH_MAINNET, prices);
 	}
 }
 
