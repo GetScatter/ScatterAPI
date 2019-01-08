@@ -220,7 +220,7 @@ const fetchers = {
 			fetch('https://api.newdex.io/v1/ticker/all', {
 				json: true,
 				gzip: true
-			}).then(x => x.json()).then(res => res.data ? res.data.map(({change, contract, currency:symbol, last:price}) => ({
+			}).then(x => x.json()).then(res => res.data ? res.data.filter(x => x.symbol.indexOf('-eusd') === -1).map(({change, contract, currency:symbol, last:price}) => ({
 				contract, symbol, price, chainId:PRICE_NETS.EOS_MAINNET.replace('prices:eos:', '')
 			})).filter(x => x.contract !== 'eosio.token') : null).catch(err => {
 				console.error(err);
