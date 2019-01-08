@@ -346,7 +346,7 @@ export default class ExchangeService {
 	        }}
 	    }
 
-	    if(origin.order.service === SERVICES.COINSWITCH){
+	    if(original.order.service === SERVICES.COINSWITCH){
 		    const updated = await this.get(`order/${orderId}`).catch(() => null);
 		    return {updated, original};
 	    }
