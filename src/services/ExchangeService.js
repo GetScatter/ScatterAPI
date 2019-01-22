@@ -163,7 +163,7 @@ export default class ExchangeService {
 	    if(canUseBancorEos(token)){
 		    const tokens = await this.get(`volume`, bancorEosApi)
 			    .then(res => {
-			    	return res.rows.map(x => ({
+			    	return res.rows.filter(x => x.from_token_code.toUpperCase() !== 'BNT').map(x => ({
 					    service:SERVICES.BANCOR_EOS,
 					    type:TYPES.ATOMIC,
 					    id:`${x.from_token_account}::${x.from_token_code}`,
