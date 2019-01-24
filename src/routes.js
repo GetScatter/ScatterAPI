@@ -5,6 +5,7 @@ import TransactionService, {PAYMENT_ACCOUNTS} from "./services/TransactionServic
 
 import PriceService, {PRICE_NETS, CURRENCIES} from './services/PriceService';
 import AppService from "./services/AppService";
+import VersionService from "./services/VersionService";
 import ExplorerService from "./services/ExplorerService";
 import FiatService from "./services/FiatService";
 import ProxyService from "./services/ProxyService";
@@ -28,6 +29,7 @@ const bucket = couchbase('scatter');
 /********************************/
 PriceService.setBucket(bucket);
 AppService.setBucket(bucket);
+VersionService.setBucket(bucket);
 ExplorerService.setBucket(bucket);
 FiatService.setBucket(bucket);
 ProxyService.setBucket(bucket);
@@ -42,6 +44,7 @@ LanguageService.setBucket(bucket);
 /*          WATCHERS            */
 /********************************/
 PriceService.watch();
+VersionService.watch();
 ExplorerService.watch();
 AppService.watch();
 FiatService.watch();
@@ -168,6 +171,10 @@ routes.get('/exchange/pairable', async (req, res) => {
 /*                  DATA CACHES                 */
 /*                                              */
 /************************************************/
+
+routes.get('/version', async (req, res) => {
+	returnResult(await VersionService.getVersion(), req, res);
+});
 
 routes.get('/explorers', async (req, res) => {
 	const {flat} = req.query;
