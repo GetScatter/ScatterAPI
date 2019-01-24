@@ -53,16 +53,17 @@ export default class VersionService {
             fetch(url+`?rand=${Math.random() * 10000 + 1}`, {
                 json: true,
                 gzip: true
-            }).then(x => x.json()).then(res => {
+            }).then(x => x.json()).then(async res => {
                 if(res.prerelease) return null;
 
                 const getAsset = needle => res.assets.find(x => x.name.indexOf(needle) > -1) || {url:'#'};
+                const getDownloadUrl = url => fetch(url).then(x => x.json()).then(x => x.browser_download_url).catch(() => '');
 
                 return {
                     version:res.tag_name,
-                    mac:getAsset('mac-').url,
-                    win:getAsset('win-').url,
-                    linux:getAsset('linux-').url,
+                    mac:await getDownloadUrl(getAsset('mac-').url),
+                    win:await getDownloadUrl(getAsset('win-').url),
+                    linux:await getDownloadUrl(getAsset('linux-').url),
                     details:res.body,
                 }
             }).catch(err => {
