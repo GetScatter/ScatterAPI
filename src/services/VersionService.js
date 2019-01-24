@@ -60,6 +60,7 @@ export default class VersionService {
                 const getDownloadUrl = url => fetch(url).then(x => x.json()).then(x => x.browser_download_url).catch(() => '');
 
                 return {
+                    release:res.html_url,
                     version:res.tag_name,
                     mac:await getDownloadUrl(getAsset('mac-').url),
                     win:await getDownloadUrl(getAsset('win-').url),
