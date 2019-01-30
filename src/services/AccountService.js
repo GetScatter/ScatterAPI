@@ -100,7 +100,7 @@ export default class AccountService {
     	const now = +new Date();
     	const irreversibleTime = +new Date((balance.timestamp*1000) + (1000*60*3.2));
     	if(now < irreversibleTime)
-    		return {error:"Transaction is not yet irreversible."};
+    		return {error:"Transaction is not yet irreversible. You must wait at least 3 minutes for the transaction to be included into the blockchain."};
 
     	return true;
     }
