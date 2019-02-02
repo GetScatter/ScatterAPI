@@ -32,18 +32,21 @@ export default class StatusService {
     static getAll(){
         const generalApi = status => ({
 	        type:'generalApi',
+            name:'General Scatter API',
 	        description:'Prices, price graphs, exchange data.',
 	        status
         });
 
         const tokenApi = status => ({
 	        type:'tokenApi',
+            name:'Token and Accounts API',
 	        description:'Token and account data.',
 	        status
         });
 
         const nodeBalancer = status => ({
             type:'nodeBalancer',
+            name:'EOSIO Node Balancer',
             description:'Load balances EOSIO nodes',
             status
         })
