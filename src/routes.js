@@ -12,6 +12,7 @@ import ProxyService from "./services/ProxyService";
 import AccountService from "./services/AccountService";
 import NetworkService from "./services/NetworkService";
 import LanguageService from "./services/LanguageService";
+import StatusService from "./services/StatusService";
 // import BackupService from './services/BackupService';
 import ExchangeService, {STABLETOKENS,BASETOKENS} from "./services/ExchangeService";
 
@@ -51,6 +52,7 @@ FiatService.watch();
 ProxyService.watch();
 NetworkService.watch();
 LanguageService.watch();
+StatusService.watch();
 
 const flattenBlockchainObject = apps => {
 	return Object.keys(apps).reduce((acc, blockchain) => {
@@ -171,6 +173,10 @@ routes.get('/exchange/pairable', async (req, res) => {
 /*                  DATA CACHES                 */
 /*                                              */
 /************************************************/
+
+routes.get('/statuses', async (req, res) => {
+	returnResult(StatusService.getStatuses(), req, res);
+});
 
 routes.get('/version', async (req, res) => {
 	returnResult(await VersionService.getVersion(), req, res);
