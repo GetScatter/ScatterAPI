@@ -30,10 +30,28 @@ export default class StatusService {
     }
 
     static getAll(){
+        const generalApi = status => ({
+	        type:'generalApi',
+	        description:'Prices, price graphs, exchange data.',
+	        status
+        });
+
+        const tokenApi = status => ({
+	        type:'tokenApi',
+	        description:'Token and account data.',
+	        status
+        });
+
+        const nodeBalancer = status => ({
+            type:'nodeBalancer',
+            description:'Load balances EOSIO nodes',
+            status
+        })
+
         return Promise.all([
-            fetch(`https://nodes.get-scatter.com/v1/chain/get_info`).then(x => x.json()).then(x => ({nodes:x.hasOwnProperty("chain_id")})).catch(() => ({nodes:false})),
-            fetch(`https://api.get-scatter.com/v1/prices`).then(x => x.json()).then(x => ({api:x.hasOwnProperty('EOS')})).catch(() => ({api:false})),
-            fetch(`https://api.light.xeos.me/api/account/eos/eosio?pretty=1`).then(x => x.json()).then(x => ({api:x.hasOwnProperty('account_name')})).catch(() => ({api:false})),
+            fetch(`https://nodes.get-scatter.com/v1/chain/get_info`).then(x => x.json()).then(x => nodeBalancer(x.hasOwnProperty("chain_id"))).catch(() => nodeBalancer(false)),
+            fetch(`https://api.get-scatter.com/v1/prices`).then(x => x.json()).then(x => generalApi(x.hasOwnProperty('EOS'))).catch(() => generalApi(false)),
+            fetch(`https://api.light.xeos.me/api/account/eos/eosio?pretty=1`).then(x => x.json()).then(x => tokenApi(x.hasOwnProperty('account_name'))).catch(() => tokenApi(false)),
         ])
     }
 
