@@ -8,10 +8,14 @@ let interval;
 // Saving last prices in RAM, to alleviate DB calls.
 // Mimics eventually persistent behavior.
 let inRam;
+let lastUpdate;
 
 export default class StatusService {
 
-    static getStatuses(){ return inRam; }
+    static getStatuses(){ return {
+        statuses:inRam,
+        lastUpdate
+    }; }
 
     static async watch(){
         clearInterval(interval);
@@ -19,6 +23,7 @@ export default class StatusService {
 
             const set = async () => {
                 inRam = await StatusService.getAll();
+	            lastUpdate = +new Date();
                 resolve(true);
             };
 
