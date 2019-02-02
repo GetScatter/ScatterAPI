@@ -13,3 +13,13 @@ export const convertBlockchain = b => {
 		case BLOCKCHAINS.TRX: return 'trx';
 	}
 }
+
+export const flattenBlockchainObject = apps => {
+	return Object.keys(apps).reduce((acc, blockchain) => {
+		apps[blockchain].map(app => {
+			const assigned = app.hasOwnProperty('blockchain') ? app : Object.assign(app, {blockchain});
+			acc.push(assigned);
+		});
+		return acc;
+	}, []);
+}

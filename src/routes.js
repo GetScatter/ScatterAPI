@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import Blockchains from './util/blockchains';
+import Blockchains, {flattenBlockchainObject} from './util/blockchains';
 
 import TransactionService, {PAYMENT_ACCOUNTS} from "./services/TransactionService";
 
@@ -54,15 +54,7 @@ NetworkService.watch();
 LanguageService.watch();
 StatusService.watch();
 
-const flattenBlockchainObject = apps => {
-	return Object.keys(apps).reduce((acc, blockchain) => {
-		apps[blockchain].map(app => {
-			const assigned = app.hasOwnProperty('blockchain') ? app : Object.assign(app, {blockchain});
-			acc.push(assigned);
-		});
-		return acc;
-	}, []);
-}
+
 
 
 const routes = Router();
