@@ -110,7 +110,7 @@ export default class AccountService {
 		if(!eos) return null;
 		const contract = await eos.contract('createbridge');
 		if(!contract) return null;
-		return await contract.create(key, name, key, free ? "get-scatter.com" : key, {authorization:`createbridge@active`})
+		return await contract.create(key, name, key, key, {authorization:`createbridge@active`})
 			.then(async () => true)
 			.catch(err => {
 				console.error('Bridge creation error', err);
