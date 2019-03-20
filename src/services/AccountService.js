@@ -113,7 +113,7 @@ export default class AccountService {
 		return await contract.create(key, name, key, free ? "get-scatter.com" : key, {authorization:`createbridge@active`})
 			.then(async () => true)
 			.catch(err => {
-				console.error('Bridge creation error', JSON.parse(err).error.what);
+				console.error('Bridge creation error', err);
 				return {error:JSON.parse(err).error.what};
 			});
 	}
