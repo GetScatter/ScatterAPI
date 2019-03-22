@@ -9,7 +9,7 @@ const token = (bancor_id, name, symbol, contract, decimals = 4) => ({
 
 export const BANCOR_EOS_PAIRS = [
 	token('5a1eb3753203d200012b8b75', `EOS`, `EOS`, `eosio.token`),
-	token('5c0e3f4464f6f90710095f3c', `eosBLACK`, `BLACK`, `eosblackteam`),
+	// token('5c0e3f4464f6f90710095f3c', `eosBLACK`, `BLACK`, `eosblackteam`),
 	token('5c0e40c553c03b14b3e30193', `Karma`, `KARMA`, `therealkarma`),
 	token('5c0e4c2f53c03b584de35afc', `Prospectors Gold`, `PGL`, `prospectorsg`),
 	token('5c0e98aa675bcf4cc346c5da', `Chaince`, `CET`, `eosiochaince`),
