@@ -323,7 +323,6 @@ let bancorTimeout;
 class Bancor {
 
 	constructor(){
-		console.log('bancor')
 		this.get = GET(null);
 		this.post = POST(null);
 
@@ -333,9 +332,8 @@ class Bancor {
 	}
 
 	async cachePrices_EOS(){
-		console.log('caching pairs')
 		clearTimeout(bancorTimeout);
-		const tokens = await this.get(`currencies/tokens?limit=50&skip=0&fromCurrencyCode=USD&includeTotal=true&orderBy=volume24h&sortOrder=desc&blockchainType=eos`, bancorEosApi);
+		const tokens = await this.get(`currencies/tokens?limit=50&skip=0&fromCurrencyCode=USD&includeTotal=true&orderBy=volume24h&sortOrder=desc&blockchainType=eos`, bancorEosApi).catch(() => null);
 		if(!tokens) return;
 		this.prices = tokens.currencies.page.reduce((acc,x) => {
 			acc[x.code] = x.price;
