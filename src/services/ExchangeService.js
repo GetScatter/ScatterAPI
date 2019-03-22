@@ -5,11 +5,11 @@ const COINSWITCH_KEY = config('COINSWITCH_KEY');
 
 import couchbase from '../database/couchbase'
 import PriceService from "./PriceService";
+import {BANCOR_EOS_PAIRS, BANCOR_RELAYS} from "../data/bancor_relays";
 const bucket = couchbase('exchange');
 
 const SERVICES = {
 	COINSWITCH:'coinswitch',
-	NEWDEX:'newdex',
 	BANCOR_EOS:'bancor_eos'
 };
 
@@ -59,11 +59,6 @@ const canUseCoinSwitch = token => {
 	return BASETOKENS.concat(STABLETOKENS).find(x => x.symbol === token.symbol && x.blockchain === token.blockchain && x.chainId === token.chainId);
 };
 
-const newDexApi = `https://api.newdex.io/v1/`;
-const canUseNewDex = (token) => {
-	return token.blockchain === 'eos';
-}
-
 const bancorEosApi = `https://api.bancor.network/0.1/`;
 const canUseBancorEos = (token) => {
 	return token.blockchain === 'eos';
@@ -88,8 +83,6 @@ const getHeaders = (api, ip = '127.0.0.1') => {
 	if(api === coinSwitchApi) headers = Object.assign(headers, coinSwitchHeader(ip));
 	return headers;
 }
-
-//https://api.newdex.io/v1/price?symbol=ridlridlcoin-ridl-eos
 
 const GET = ip => (route, api = coinSwitchApi) => fetch(`${api}${route}`, {
 	method:"GET",
@@ -161,20 +154,12 @@ export default class ExchangeService {
         }
 
 	    if(canUseBancorEos(token)){
-		    const tokens = await this.get(`volume`, bancorEosApi)
-			    .then(res => {
-			    	return res.rows.filter(x => x.from_token_code.toUpperCase() !== 'BNT').map(x => ({
-					    service:SERVICES.BANCOR_EOS,
-					    type:TYPES.ATOMIC,
-					    id:`${x.from_token_account}::${x.from_token_code}`,
-					    symbol:x.from_token_code.toUpperCase(),
-					    token:eosToken(x.from_token_code.toUpperCase(), x.from_token_account)
-				    }))
-			    })
-			    .catch(err => {
-				    console.error(err);
-				    return []
-			    });
+		    const tokens = BANCOR_EOS_PAIRS.map(x => {
+	    		return Object.assign({
+				    service:SERVICES.BANCOR_EOS,
+				    type:TYPES.ATOMIC,
+			    }, x);
+		    });
 
 		    if(tokens.find(x => x.token.symbol === token.symbol && x.token.contract === token.contract)){
 			    pairs['eos'] = tokens.filter(x => x.token.symbol !== token.symbol && x.token.contract !== token.contract);
@@ -200,44 +185,19 @@ export default class ExchangeService {
 					    return null
 				    });
 
-		    case SERVICES.NEWDEX:
-		    	const tokenId = isEos(token) ? toSymbol : `${token.contract}-${token.symbol}-eos`.toLowerCase();
-			    return this.get(`price?symbol=${tokenId}`, newDexApi)
-				    .then(x => {
-				    	return {
-						    rate:(isEos(token) ? 1 / x.price : x.price),
-						    min:null,
-						    max:null,
-					    }
-				    })
-				    .catch(err => {
-				    	console.error('err', err);
-					    return null
-				    });
-
 		    case SERVICES.BANCOR_EOS:
-			    return this.get(`volume`, bancorEosApi)
-				    .then(async res => {
-				    	const pair = res.rows.find(x => x.from_token_code === toSymbol);
-					    const fromPair = res.rows.find(x => x.from_token_code === fromSymbol);
-				    	const eosPrice = res.rows.find(x => x.from_token_code === 'EOS').token_value;
+			    const eosPrice = bancor.prices['EOS'];
+			    const rate = (() => {
+				    if(isEos(token)) return eosPrice / bancor.prices[toSymbol];
+				    if(toSymbol === 'EOS') return bancor.prices[fromSymbol] / eosPrice;
+				    return (bancor.prices[fromSymbol] / eosPrice) / (bancor.prices[toSymbol] / eosPrice);
+			    })();
 
-				    	const rate = (() => {
-				    		if(isEos(token)) return eosPrice / pair.token_value;
-				    		if(toSymbol === 'EOS') return fromPair.token_value / eosPrice;
-				    		return (fromPair.token_value / eosPrice) / (pair.token_value / eosPrice);
-					    })();
-
-				    	return {
-						    rate,
-						    min:null,
-						    max:null,
-					    }
-				    })
-				    .catch(err => {
-					    console.error('err', err);
-					    return null
-				    });
+			    return {
+				    rate,
+				    min:null,
+				    max:null,
+			    }
 
 	    }
 
@@ -292,26 +252,16 @@ export default class ExchangeService {
 		    const toAccount = to.account;
 		    const fromAccount = from.account;
 
-		    const pairs = await this.get(`volume`, bancorEosApi)
-			    .then(async res => res.rows)
-			    .catch(err => null);
-
-		    if(!pairs) return;
-
-		    const pairFrom = pairs.find(x => x.from_token_code === fromSymbol.toUpperCase());
-		    const pairTo = pairs.find(x => x.from_token_code === toSymbol.toUpperCase());
-		    if(!pairFrom || !pairTo) return;
-
-		    const eosPrice = pairs.find(x => x.from_token_code === 'EOS').token_value;
-
+		    const eosPrice = bancor.prices['EOS'];
 		    const rate = (() => {
-			    if(isEos(token)) return eosPrice / pairTo.token_value;
-			    if(toSymbol === 'EOS') return pairFrom.token_value / eosPrice;
-			    return (pairFrom.token_value / eosPrice) / (pairTo.token_value / eosPrice);
+			    if(isEos(token)) return eosPrice / bancor.prices[toSymbol.toUpperCase()];
+			    if(toSymbol.toUpperCase() === 'EOS') return bancor.prices[fromSymbol.toUpperCase()] / eosPrice;
+			    return (bancor.prices[fromSymbol.toUpperCase()] / eosPrice) / (bancor.prices[toSymbol.toUpperCase()] / eosPrice);
 		    })();
 
-		    const converter1 = pairFrom.converter_account;
-		    const converter2 = pairTo.converter_account;
+
+		    const converter1 = BANCOR_RELAYS[fromSymbol.toUpperCase()];
+		    const converter2 = BANCOR_RELAYS[toSymbol.toUpperCase()];
 
 		    const id = `${fromAccount}:${toSymbol}:${toAccount}:${amount}:${+new Date()}`;
 
@@ -367,3 +317,38 @@ export default class ExchangeService {
     }
 
 }
+
+
+let bancorTimeout;
+class Bancor {
+
+	constructor(){
+		console.log('bancor')
+		this.get = GET(null);
+		this.post = POST(null);
+
+		this.prices = {};
+		this.cachePrices_EOS();
+
+	}
+
+	async cachePrices_EOS(){
+		console.log('caching pairs')
+		clearTimeout(bancorTimeout);
+		const tokens = await this.get(`currencies/tokens?limit=50&skip=0&fromCurrencyCode=USD&includeTotal=true&orderBy=volume24h&sortOrder=desc&blockchainType=eos`, bancorEosApi);
+		if(!tokens) return;
+		this.prices = tokens.currencies.page.reduce((acc,x) => {
+			acc[x.code] = x.price;
+			return acc;
+		}, {});
+
+		bancorTimeout = setTimeout(() => {
+			this.cachePrices_EOS();
+		}, 10000);
+
+
+	}
+
+}
+
+const bancor = new Bancor();
