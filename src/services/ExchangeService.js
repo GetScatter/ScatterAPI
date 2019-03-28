@@ -154,12 +154,16 @@ export default class ExchangeService {
         }
 
 	    if(canUseBancorEos(token)){
-		    const tokens = BANCOR_EOS_PAIRS.map(x => {
+		    let tokens = BANCOR_EOS_PAIRS.map(x => {
 	    		return Object.assign({
 				    service:SERVICES.BANCOR_EOS,
 				    type:TYPES.ATOMIC,
 			    }, x);
 		    });
+
+		    tokens = tokens.filter(token => {
+		    	return bancor.prices.hasOwnProperty(token.symbol.toUpperCase())
+		    })
 
 		    if(tokens.find(x => x.token.symbol === token.symbol && x.token.contract === token.contract)){
 			    pairs['eos'] = tokens.filter(x => x.token.symbol !== token.symbol && x.token.contract !== token.contract);
@@ -342,7 +346,7 @@ class Bancor {
 
 		bancorTimeout = setTimeout(() => {
 			this.cachePrices_EOS();
-		}, 10000);
+		}, 5000);
 
 
 	}
