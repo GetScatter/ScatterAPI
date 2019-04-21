@@ -291,11 +291,12 @@ routes.post('/create_bridge', async (req, res) => {
 });
 
 routes.get('/machine/:id', async (req, res) => {
-	const {id} = req.params;
-	const ip = senderIp(req);
-	if(await AccountService.checkMachineId(id)) return returnResult(false, req, res);
-	if(await AccountService.checkIp(ip)) return returnResult(false, req, res);
-	returnResult(true, req, res);
+	return returnResult(false, req, res);
+	// const {id} = req.params;
+	// const ip = senderIp(req);
+	// if(await AccountService.checkMachineId(id)) return returnResult(false, req, res);
+	// if(await AccountService.checkIp(ip)) return returnResult(false, req, res);
+	// returnResult(true, req, res);
 });
 
 
