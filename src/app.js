@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import routes from './routes';
 import cors from 'cors';
 import compression from 'compression';
+import AnalyticsService from "./services/AnalyticsService";
 
 const app = express();
 app.disable('x-powered-by');
@@ -15,6 +16,11 @@ app.use(cors({
 app.use(logger('dev', { skip: () => app.get('env') === 'test' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+app.use ((req, res, next) => {
+	AnalyticsService.logActivity(req);
+	next();
+});
 
 // Routes
 app.use('/v1', routes);
