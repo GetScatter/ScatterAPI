@@ -17,6 +17,7 @@ export default class AnalyticsService {
 
 	static async logActivity(req){
 		const uip = senderIp(req);
+		console.log('uip', uip);
 		const hashedIp = ecc.sha256(uip);
 		const visitor = ua(TRACKING_ID, hashedIp, {strictCidFormat: false});
 		visitor.set("uip", uip);
