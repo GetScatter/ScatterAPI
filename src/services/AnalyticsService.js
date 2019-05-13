@@ -16,7 +16,10 @@ const TRACKING_ID = config('GA_TRACKING_ID');
 export default class AnalyticsService {
 
 	static async logActivity(req){
-		const uip = senderIp(req);
+		const baseIp = senderIp(req);
+		const [a,b,c,d] = baseIp.split('.');
+		const uip = `${a}.${b}.${c}.000`;
+		// const uip = senderIp(req);
 		const hashedIp = ecc.sha256(uip);
 		const visitor = ua(TRACKING_ID, hashedIp, {strictCidFormat: false});
 		visitor.set("uip", uip);
