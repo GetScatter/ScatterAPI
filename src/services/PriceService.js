@@ -82,7 +82,7 @@ export default class PriceService {
 
     static async getV2Prices(v2, convert = true){
 	    const prices = await PriceService.getPrices();
-	    const {EOS, ETH, TRX} = prices[PRICE_NETS.MAIN];
+	    const {EOS, ETH, TRX, BTC} = prices[PRICE_NETS.MAIN];
 	    const eosMainnetPrices = prices[PRICE_NETS.EOS_MAINNET];
 	    const ethMainnetPrices = prices[PRICE_NETS.ETH_MAINNET];
 
@@ -114,6 +114,7 @@ export default class PriceService {
 
 			    'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906':convertToMultiCurrency(EOS),
 			    'eth:eth:eth:1':convertToMultiCurrency(ETH),
+			    'btc:btc:btc:1':convertToMultiCurrency(BTC),
 			    'trx:trx:trx:1':convertToMultiCurrency(TRX),
 		    };
 
@@ -189,7 +190,7 @@ export default class PriceService {
 
 const fetchers = {
 	[PRICE_NETS.MAIN]:async () => {
-		const SYMBOLS = 'BTC,TRX,ETH,EOS'
+		const SYMBOLS = 'BTC,TRX,ETH,EOS,BTC'
 		const prices = await Promise.race([
 			new Promise(resolve => setTimeout(() => resolve(false), 2500)),
 			fetch(`https://min-api.cryptocompare.com/data/pricemulti?fsyms=${SYMBOLS}&tsyms=USD&api_key=${COMPARE_KEY}`)
