@@ -13,6 +13,7 @@ import AccountService from "./services/AccountService";
 import NetworkService from "./services/NetworkService";
 import LanguageService from "./services/LanguageService";
 import StatusService from "./services/StatusService";
+import FeeService from "./services/FeeService";
 // import BackupService from './services/BackupService';
 import ExchangeService, {STABLETOKENS,BASETOKENS} from "./services/ExchangeService";
 
@@ -37,6 +38,7 @@ ProxyService.setBucket(bucket);
 AccountService.setBucket(bucket);
 NetworkService.setBucket(bucket);
 LanguageService.setBucket(bucket);
+FeeService.setBucket(bucket);
 // BackupService.setBucket(bucket);
 
 
@@ -53,6 +55,7 @@ ProxyService.watch();
 NetworkService.watch();
 LanguageService.watch();
 StatusService.watch();
+FeeService.watch();
 
 
 
