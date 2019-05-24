@@ -80,6 +80,7 @@ const returnResult = (data, req, res) => {
 /*             PRICES AND EXCHANGE              */
 /*                                              */
 /************************************************/
+routes.get('/fees', (req, res) => returnResult(FeeService.getFees(), req, res));
 routes.get('/currencies', (req, res) => returnResult(CURRENCIES, req, res));
 routes.get('/currencies/prices', async (req, res) => {
 	let prices = await FiatService.getConversions();

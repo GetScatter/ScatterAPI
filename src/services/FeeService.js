@@ -14,7 +14,7 @@ export default class FeeService {
 
 
 
-    static async getFees(){
+    static getFees(){
         return inRam;
     }
 
