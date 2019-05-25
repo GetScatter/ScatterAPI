@@ -240,33 +240,34 @@ routes.post('/apps', async (req, res) => {
 
 
 routes.post('/create_eos', async (req, res) => {
-	const defaultError = {error:'There was an error creating the account. Please try again later.'};
-	const {transaction_id, signature, keys, account_name} = req.body;
-
-	if(!keys.hasOwnProperty('active') || !keys.hasOwnProperty('owner') || !keys.active.length || !keys.owner.length){
-		return returnResult({error:'Invalid keys'}, req, res);
-	}
-
-	const minimumCost = await AccountService.getAccountMinimumCost();
-	if(!minimumCost) return returnResult(defaultError, req, res);
-
-	const transactionStatus = await TransactionService.eos(transaction_id, minimumCost, PAYMENT_ACCOUNTS.EOS.NEW_ACCOUNT);
-	if(!transactionStatus || transactionStatus.hasOwnProperty('error')) return returnResult(transactionStatus.hasOwnProperty('error')
-		? {error:transactionStatus.error}
-		: {error:'The transaction could not be verified.'}, req, res);
-
-
-	const [quantity, memo] = transactionStatus;
-
-	const leftForResources = parseFloat(quantity - minimumCost).toFixed(4);
-	if(!leftForResources || leftForResources <= 0) return returnResult({error:'There was not enough EOS left for resources.'}, req, res);
-
-	if(memo !== keys.active) return returnResult({error:'The signature for account creation did not match the key from the exchange memo'}, req, res);
-
-	const created = await AccountService.createEosAccount(account_name, keys, leftForResources, transaction_id, signature);
-	if(!created) return returnResult(defaultError, req, res);
-
-	returnResult({created}, req, res);
+	returnResult({error:"makeaccounts is no longer valid."}, req, res);
+	// const defaultError = {error:'There was an error creating the account. Please try again later.'};
+	// const {transaction_id, signature, keys, account_name} = req.body;
+	//
+	// if(!keys.hasOwnProperty('active') || !keys.hasOwnProperty('owner') || !keys.active.length || !keys.owner.length){
+	// 	return returnResult({error:'Invalid keys'}, req, res);
+	// }
+	//
+	// const minimumCost = await AccountService.getAccountMinimumCost();
+	// if(!minimumCost) return returnResult(defaultError, req, res);
+	//
+	// const transactionStatus = await TransactionService.eos(transaction_id, minimumCost, PAYMENT_ACCOUNTS.EOS.NEW_ACCOUNT);
+	// if(!transactionStatus || transactionStatus.hasOwnProperty('error')) return returnResult(transactionStatus.hasOwnProperty('error')
+	// 	? {error:transactionStatus.error}
+	// 	: {error:'The transaction could not be verified.'}, req, res);
+	//
+	//
+	// const [quantity, memo] = transactionStatus;
+	//
+	// const leftForResources = parseFloat(quantity - minimumCost).toFixed(4);
+	// if(!leftForResources || leftForResources <= 0) return returnResult({error:'There was not enough EOS left for resources.'}, req, res);
+	//
+	// if(memo !== keys.active) return returnResult({error:'The signature for account creation did not match the key from the exchange memo'}, req, res);
+	//
+	// const created = await AccountService.createEosAccount(account_name, keys, leftForResources, transaction_id, signature);
+	// if(!created) return returnResult(defaultError, req, res);
+	//
+	// returnResult({created}, req, res);
 });
 
 routes.post('/create_bridge', async (req, res) => {
