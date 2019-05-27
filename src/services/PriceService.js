@@ -224,9 +224,11 @@ const fetchers = {
 			}).then(x => x.json()).then(res => {
 				if(!res.data) return null;
 
-				let data = res.data.filter(x => x.symbol.indexOf('-eusd') === -1);
-				data = res.data.filter(x => x.symbol.indexOf('-cusd') === -1 || x.symbol === 'stablecarbon-cusd-eos');
-				data = res.data.filter(x => x.symbol.indexOf('-tlos') === -1);
+				let data = res.data.filter(x => x.symbol.indexOf('-eos') === x.symbol.length - 4);
+
+				// let data = res.data.filter(x => x.symbol.indexOf('-eusd') === -1);
+				// data = res.data.filter(x => x.symbol.indexOf('-cusd') === -1 || x.symbol === 'stablecarbon-cusd-eos');
+				// data = res.data.filter(x => x.symbol.indexOf('-tlos') === -1);
 				data = data.map(({change, contract, currency:symbol, last:price}) => ({
 					contract, symbol, price, chainId:PRICE_NETS.EOS_MAINNET.replace('prices:eos:', '')
 				}))
