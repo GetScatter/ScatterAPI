@@ -20,13 +20,12 @@ const TYPES = {
 };
 
 const eosMainnetId = 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906';
-const ethToken = (symbol, contract) => ({ blockchain:'eth', chainId:'1', contract, symbol, name:symbol, decimals:18, });
+const ethToken = (symbol, contract, decimals = 18) => ({ blockchain:'eth', chainId:'1', contract, symbol, name:symbol, decimals, });
 const trxToken = (symbol, contract) => ({ blockchain:'trx', chainId:'1', contract, symbol, name:symbol, decimals:6, });
 const eosToken = (symbol, contract, chainId = eosMainnetId) => ({ blockchain:'eos', chainId, contract, symbol, name:symbol, decimals:4, });
 
 export const STABLETOKENS = [
-	// Fuck this token.
-	// ethToken('USDC', '0xb9e31a22e3a1c743c6720f3b723923e91f3c0f8b'),
+	ethToken('USDC', '0xb9e31a22e3a1c743c6720f3b723923e91f3c0f8b', 6),
 	ethToken('TUSD', '0x8dd5fbce2f6a956c3022ba3663759011dd51e73e'),
 	ethToken('DAI', '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359'),
 ];
