@@ -114,7 +114,6 @@ export default class PriceService {
 
 			    'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906':convertToMultiCurrency(EOS),
 			    'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906:CPU / NET':convertToMultiCurrency(EOS),
-			    'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906:RAM':convertToMultiCurrency(EOS),
 			    'eth:eth:eth:1':convertToMultiCurrency(ETH),
 			    'btc:btc:btc:1':convertToMultiCurrency(BTC),
 			    'trx:trx:trx:1':convertToMultiCurrency(TRX),
