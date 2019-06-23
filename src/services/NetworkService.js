@@ -33,6 +33,7 @@ export default class NetworkService {
                 if(!bucket) return;
 
                 const entries = await NetworkService.getAll();
+                console.log(entries);
                 if(entries) {
                     Object.keys(entries).map(b => {
                         const blockchain = convertBlockchain(b);
