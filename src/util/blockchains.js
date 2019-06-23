@@ -1,7 +1,8 @@
 const BLOCKCHAINS = {
 	EOSIO:'EOSIO',
 	ETH:'Ethereum',
-	TRX:'Tron'
+	TRX:'Tron',
+	BTC:'Bitcoin',
 }
 
 export default BLOCKCHAINS;
@@ -11,6 +12,7 @@ export const convertBlockchain = b => {
 		case BLOCKCHAINS.EOSIO: return 'eos';
 		case BLOCKCHAINS.ETH: return 'eth';
 		case BLOCKCHAINS.TRX: return 'trx';
+		case BLOCKCHAINS.BTC: return 'btc';
 	}
 }
 
