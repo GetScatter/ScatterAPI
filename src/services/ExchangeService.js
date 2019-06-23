@@ -8,6 +8,8 @@ import PriceService from "./PriceService";
 import {BANCOR_EOS_PAIRS, BANCOR_RELAYS} from "../data/bancor_relays";
 const bucket = couchbase('exchange');
 
+const pairCaches = {};
+
 const SERVICES = {
 	COINSWITCH:'coinswitch',
 	BANCOR_EOS:'bancor_eos'
@@ -129,20 +131,35 @@ export default class ExchangeService {
         const fromSymbol = token.symbol;
 
         const pairs = {};
+	    const timestamp = new Date();
 
         if(canUseCoinSwitch(token)){
-	        const coinswitchPairs = await this.post(`pairs`, {depositCoin:fromSymbol.toLowerCase(), destinationCoin:toSymbol.toLowerCase()}, coinSwitchApi)
-		        .then(res => res.filter(x => x.isActive))
-		        .then(res => res.map(x => ({
-			        service:SERVICES.COINSWITCH,
-			        type:TYPES.EXCHANGE,
-			        id:x.destinationCoin,
-			        symbol:x.destinationCoin.toUpperCase(),
-		        })))
-		        .catch(err => {
-		        	console.error(err);
-		        	return []
+        	let coinswitchPairs;
+
+        	const key = `coinswitch::pairs::${fromSymbol.toLowerCase()}::${toSymbol.toLowerCase()}::${timestamp.getDate()}-${timestamp.getHours()}`;
+        	console.log('cache', key, pairCaches.hasOwnProperty(key), Object.keys(pairCaches));
+        	if(pairCaches.hasOwnProperty(key)) coinswitchPairs = pairCaches[key];
+        	else {
+		        coinswitchPairs = await this.post(`pairs`, {depositCoin:fromSymbol.toLowerCase(), destinationCoin:toSymbol.toLowerCase()}, coinSwitchApi)
+			        .then(res => res.filter(x => x.isActive))
+			        .then(res => res.map(x => ({
+				        service:SERVICES.COINSWITCH,
+				        type:TYPES.EXCHANGE,
+				        id:x.destinationCoin,
+				        symbol:x.destinationCoin.toUpperCase(),
+			        })))
+			        .catch(err => {
+				        console.error(err);
+				        return []
+			        });
+
+		        Object.keys(pairCaches).filter(x => x.indexOf(`coinswitch::pairs::${fromSymbol.toLowerCase()}::${toSymbol.toLowerCase()}::`) > -1).map(_key => {
+		        	delete pairCaches[_key];
 		        });
+
+		        pairCaches[key] = coinswitchPairs;
+	        }
+
 
 	        pairs['base'] = coinswitchPairs.map(pair => {
 		        return Object.assign({token:BASETOKENS.find(x => x.symbol === pair.symbol)}, pair);
@@ -270,7 +287,7 @@ export default class ExchangeService {
 		    const id = `${fromAccount}:${toSymbol}:${toAccount}:${amount}:${+new Date()}`;
 
 		    const decimals = toSymbol.toUpperCase() === 'IQ' ? 3 : 4;
-		    const amountWithSlippage = amount*rate - ((amount*rate)*0.02);
+		    const amountWithSlippage = amount*rate - ((amount*rate)*0.04);
 		    const memo = `1,${converter1} BNT ${converter2} ${toSymbol.toUpperCase()},${parseFloat(amountWithSlippage).toFixed(decimals)},${toAccount}`;
 
 		    const order = {
