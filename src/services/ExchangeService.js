@@ -356,7 +356,7 @@ class Bancor {
 		clearTimeout(bancorTimeout);
 		const tokens = await this.get(`currencies/tokens?limit=50&skip=0&fromCurrencyCode=USD&includeTotal=true&orderBy=volume24h&sortOrder=desc&blockchainType=eos`, bancorEosApi).catch(() => null);
 		if(!tokens) return;
-		this.prices = tokens.currencies.page.reduce((acc,x) => {
+		this.prices = tokens.page.reduce((acc,x) => {
 			acc[x.code] = x.price;
 			return acc;
 		}, {});
