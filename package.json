@@ -14,28 +14,23 @@
     "npm": ">=3.10.0"
   },
   "scripts": {
-    "prestart": "npm run -s build",
     "prod": "node dist/index.js",
-    "pre-start": "rimraf -p",
-    "start": "npm run pre-start && nodemon src/index.js --exec \"node -r dotenv/config -r babel-register\"",
+    "start": "nodemon src/index.js --exec \"node -r dotenv/config -r @babel/register\"",
     "clean": "rimraf dist",
     "build": "npm run clean && mkdir -p dist && babel src -s -D -d dist",
-    "testfile": "mocha --require babel-core/register --exit --timeout 1000000",
+    "testfile": "mocha --require @babel/register --exit --timeout 1000000",
     "test": "npm run testfile \"test/**/*.spec.js\" --timeout 1000000",
     "crash": "kill-port 6544"
   },
   "dependencies": {
+    "@babel/runtime": "^7.5.4",
     "aes-oop": "^1.0.4",
-    "babel-cli": "^6.26.0",
-    "babel-plugin-transform-class-properties": "^6.24.1",
-    "babel-plugin-transform-object-rest-spread": "^6.26.0",
-    "babel-preset-env": "^1.6.1",
     "blockchain.info": "^2.12.1",
     "bluebird": "^3.5.3",
     "body-parser": "^1.18.2",
     "compression": "^1.7.3",
     "cors": "^2.8.4",
-    "couchbase": "^2.6.2",
+    "couchbase": "^2.6.5",
     "create-hash": "^1.2.0",
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",
@@ -43,14 +38,20 @@
     "express": "^4.16.4",
     "get-random-values": "^1.2.0",
     "isomorphic-fetch": "^2.2.1",
-    "morgan": "^1.9.0",
+    "morgan": "^1.9.1",
     "murmurhash": "0.0.2",
     "rimraf": "^2.6.2",
     "universal-analytics": "^0.4.20",
     "uuid": "^3.3.2"
   },
   "devDependencies": {
-    "babel-register": "^6.26.0",
+    "@babel/cli": "^7.5.0",
+    "@babel/core": "^7.5.4",
+    "@babel/node": "^7.5.0",
+    "@babel/plugin-syntax-dynamic-import": "^7.2.0",
+    "@babel/plugin-transform-runtime": "^7.5.0",
+    "@babel/preset-env": "^7.5.4",
+    "@babel/register": "^7.4.4",
     "chai": "^4.2.0",
     "dotenv": "^4.0.0",
     "kill-port": "^1.3.2",
@@ -58,22 +59,6 @@
     "mocha": "^5.2.0",
     "nodemon": "^1.12.1",
     "supertest": "^3.0.0"
-  },
-  "babel": {
-    "presets": [
-      [
-        "env",
-        {
-          "targets": {
-            "node": "current"
-          }
-        }
-      ]
-    ],
-    "plugins": [
-      "transform-object-rest-spread",
-      "transform-class-properties"
-    ]
   },
   "bugs": {
     "url": "https://github.com/vmasto/express-babel/issues"
