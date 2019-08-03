@@ -85,12 +85,12 @@ export default class AppService {
 		        name:'BlueBet',
 		        text:'Poker, Baccarat, Black Jack, Powerball.',
 		        colors:{
-			        overlays:'#000',
-			        text:'#000',
+			        overlays:'yellow',
+			        text:'yellow',
 			        button:{
-				        color:'#000',
-				        background:'#fff',
-				        border:'#000'
+				        color:'yellow',
+				        background:'transparent',
+				        border:'1px solid yellow'
 			        },
 
 		        }
@@ -106,7 +106,7 @@ export default class AppService {
 			        button:{
 				        color:'#fff',
 				        background:'transparent',
-				        border:'#fff'
+				        border:'1px solid #fff'
 			        },
 
 		        }
