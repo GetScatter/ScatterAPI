@@ -2,6 +2,7 @@ import "isomorphic-fetch"
 import config from '../util/config'
 import app from "../app";
 import {flattenBlockchainObject} from "../util/blockchains";
+import FeaturedApp from "../models/FeaturedApp";
 
 // Once every 30 minutes.
 const intervalTime = 60000 * 30;
@@ -73,6 +74,44 @@ export default class AppService {
                 return null;
             })
         ])
+    }
+
+    static getFeatured(){
+        // TODO: Hardcoded for now
+        return [
+	        FeaturedApp.fromJson({
+		        applink:'bluebet.one',
+		        img:'https://images.unsplash.com/photo-1517232115160-ff93364542dd?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1266&q=80',
+		        name:'BlueBet',
+		        text:'Poker, Baccarat, Black Jack, Powerball.',
+		        colors:{
+			        overlays:'#000',
+			        text:'#000',
+			        button:{
+				        color:'#000',
+				        background:'#fff',
+				        border:'#000'
+			        },
+
+		        }
+	        }),
+	        FeaturedApp.fromJson({
+		        applink:'decentium.org',
+		        img:'https://images.unsplash.com/photo-1484914440268-8d352fe4db95?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1350&q=80',
+		        name:'Decentium',
+		        text:'Decentium is a decentralized publishing and tipping platform where authors own their content and earn money and exposure through endorsements.',
+		        colors:{
+			        overlays:'#fff',
+			        text:'#fff',
+			        button:{
+				        color:'#fff',
+				        background:'transparent',
+				        border:'#fff'
+			        },
+
+		        }
+	        })
+        ]
     }
 
 }

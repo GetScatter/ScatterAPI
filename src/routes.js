@@ -220,6 +220,10 @@ routes.get('/apps', async (req, res) => {
 	returnResult(apps, req, res);
 });
 
+routes.get('/apps/featured', async (req, res) => {
+	returnResult(await AppService.getFeatured(), req, res);
+});
+
 routes.post('/apps', async (req, res) => {
 	const {apps} = req.body;
 	let allApps = await AppService.getApps();
