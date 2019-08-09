@@ -222,6 +222,11 @@ routes.post('/apps', async (req, res) => {
 	returnResult(result, req, res);
 });
 
+routes.get('/app/:applink', async (req, res) => {
+	const {applink} = req.params;
+	returnResult(await AppService.findApp(applink), req, res);
+});
+
 
 
 

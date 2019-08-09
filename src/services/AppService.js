@@ -38,6 +38,52 @@ export default class AppService {
 	    });
     }
 
+    static async findApp(origin){
+	    const emptyResult = {
+		    applink:origin,
+		    type:'',
+		    name:origin,
+		    description:'',
+		    logo:'',
+		    url:'',
+	    };
+
+	    const dappData = await AppService.getFlatApps();
+	    let found = dappData[origin];
+
+	    if(!found){
+		    (() => {
+			    // Checking subdomains
+			    if(origin.split('.').length < 2) return;
+			    const [subdomain, domain, suffix] = origin.split('.');
+			    Object.keys(dappData).map(applink => {
+				    if(origin.indexOf(applink) === -1) return;
+				    const dapp = dappData[applink];
+				    if(!dapp.hasOwnProperty('subdomains') || !dapp.subdomains.length) return;
+				    // Checking wildcards
+				    if(dapp.subdomains.find(x => x === '*')){
+					    if(`*.${applink}` === `*.${domain}.${suffix}`) return found = dapp;
+				    }
+				    // Checking hardcoded domains
+				    else {
+					    dapp.subdomains.map(sub => {
+						    if(`${sub}.${applink}` === origin) return found = dapp;
+					    })
+				    }
+			    })
+		    })();
+	    }
+
+	    if(!found) return emptyResult;
+
+	    const maxDescriptionLength = 70;
+	    if(found.description.length > maxDescriptionLength){
+		    found.description = `${found.description.substr(0,70)}${found.description.length > 70 ? '...':''}`
+	    }
+
+	    return found;
+    }
+
     static async watch(){
         clearInterval(interval);
         return new Promise(async resolve => {
