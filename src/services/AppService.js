@@ -48,7 +48,10 @@ export default class AppService {
 		    url:'',
 	    };
 
-	    const dappData = await AppService.getFlatApps();
+	    const dappData = await AppService.getFlatApps().then(res => res.reduce((acc,x) => {
+            acc[x.applink] = x;
+            return acc;
+	    }, {}));
 	    let found = dappData[origin];
 
 	    if(!found){
