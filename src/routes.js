@@ -207,17 +207,7 @@ routes.get('/networks', async (req, res) => {
 
 routes.get('/apps', async (req, res) => {
 	const {flat} = req.query;
-	let apps = await AppService.getApps();
-	if(flat) {
-		apps = flattenBlockchainObject(apps);
-		apps = apps.map(app => {
-			const a = JSON.parse(JSON.stringify(app));
-			a.url = ReflinkService.withRefLink(a.url, a.applink);
-			return a;
-		});
-	}
-
-	returnResult(apps, req, res);
+	returnResult(flat ? await AppService.getFlatApps() : AppService.getApps(), req, res);
 });
 
 routes.get('/apps/featured', async (req, res) => {
@@ -226,9 +216,9 @@ routes.get('/apps/featured', async (req, res) => {
 
 routes.post('/apps', async (req, res) => {
 	const {apps} = req.body;
-	let allApps = await AppService.getApps();
+	let allApps = await AppService.getFlatApps();
 	if(!apps || !apps.length) return returnResult(allApps, req, res);
-	const result = flattenBlockchainObject(allApps).filter(x => apps.includes(x.applink));
+	const result = allApps.filter(x => apps.includes(x.applink));
 	returnResult(result, req, res);
 });
 

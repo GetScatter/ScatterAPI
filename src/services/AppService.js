@@ -3,6 +3,7 @@ import config from '../util/config'
 import app from "../app";
 import {flattenBlockchainObject} from "../util/blockchains";
 import FeaturedApp from "../models/FeaturedApp";
+import ReflinkService from "./ReflinkService";
 
 // Once every 30 minutes.
 const intervalTime = 60000 * 30;
@@ -25,6 +26,16 @@ export default class AppService {
     static async getApps(){
 	    if(!inRam) inRam = (await bucket.get(bucketKey)).value;
         return inRam;
+    }
+
+    static async getFlatApps(){
+	    let apps = await AppService.getApps();
+	    apps = flattenBlockchainObject(apps);
+	    return apps.map(app => {
+		    const a = JSON.parse(JSON.stringify(app));
+		    a.url = ReflinkService.withRefLink(a.url, a.applink);
+		    return a;
+	    });
     }
 
     static async watch(){
