@@ -1,15 +1,12 @@
 import { Router } from 'express';
 import Blockchains, {flattenBlockchainObject} from './util/blockchains';
 
-import TransactionService, {PAYMENT_ACCOUNTS} from "./services/TransactionService";
-
 import PriceService, {PRICE_NETS, CURRENCIES} from './services/PriceService';
 import AppService from "./services/AppService";
 import VersionService from "./services/VersionService";
 import ExplorerService from "./services/ExplorerService";
 import FiatService from "./services/FiatService";
 import ProxyService from "./services/ProxyService";
-import AccountService from "./services/AccountService";
 import NetworkService from "./services/NetworkService";
 import LanguageService from "./services/LanguageService";
 import StatusService from "./services/StatusService";
@@ -23,6 +20,7 @@ import ReflinkService from "./services/ReflinkService";
 import config from "./util/config";
 import * as ecc from "eosjs-ecc";
 import BitcoinService from "./services/BitcoinService";
+import WalletPackHelpers from "./services/WalletPackHelpers";
 
 const bucket = couchbase('scatter');
 
@@ -36,7 +34,6 @@ VersionService.setBucket(bucket);
 ExplorerService.setBucket(bucket);
 FiatService.setBucket(bucket);
 ProxyService.setBucket(bucket);
-AccountService.setBucket(bucket);
 NetworkService.setBucket(bucket);
 LanguageService.setBucket(bucket);
 FeeService.setBucket(bucket);
@@ -228,6 +225,17 @@ routes.get('/app/:applink', async (req, res) => {
 });
 
 
+/************************************************/
+/*                                              */
+/*                 MOBILE HELPERS               */
+/*                                              */
+/************************************************/
+
+
+routes.post('/walletpack/abis', async (req, res) => {
+	const {network, accounts} = req.body;
+	returnResult(await WalletPackHelpers.getContract(network, accounts), req, res);
+});
 
 
 
@@ -238,44 +246,6 @@ routes.get('/app/:applink', async (req, res) => {
 /*                                              */
 /************************************************/
 
-
-routes.post('/create_eos', async (req, res) => {
-	returnResult({error:"makeaccounts is no longer valid."}, req, res);
-});
-
-routes.post('/create_bridge', async (req, res) => {
-	const defaultError = {error:'There was an error creating the account. Please try again later.'};
-	const {signature, key, name, machineId, free} = req.body;
-	const ip = senderIp(req);
-
-	if(!key || !key.length) return returnResult({error:'Invalid Key'}, req, res);
-
-	if(free){
-		if(machineId.length !== 64) return returnResult({error:'Bad Machine ID.'}, req, res);
-		if(await AccountService.checkMachineId(machineId)) return returnResult({error:'One free account per user.'}, req, res);
-		if(await AccountService.checkIp(ip)) return returnResult({error:'One free account per user.'}, req, res);
-		if(!await AccountService.proveSignature(signature, key, AccountService.sha256(key+machineId+name))) return returnResult({error:'Signature does not match key.'}, req, res);
-
-		const created = await AccountService.createBridgeAccount(name, key, true);
-		if(created && !created.hasOwnProperty('error')) await AccountService.logCreation(ip, machineId);
-		returnResult(created, req, res);
-	} else {
-		const canCreate = await AccountService.canCreateBridge(key, signature);
-		if(canCreate !== true) return returnResult(canCreate, req, res);
-
-		const created = await AccountService.createBridgeAccount(name, key);
-		return returnResult(created, req, res);
-	}
-});
-
-routes.get('/machine/:id', async (req, res) => {
-	return returnResult(false, req, res);
-	// const {id} = req.params;
-	// const ip = senderIp(req);
-	// if(await AccountService.checkMachineId(id)) return returnResult(false, req, res);
-	// if(await AccountService.checkIp(ip)) return returnResult(false, req, res);
-	// returnResult(true, req, res);
-});
 
 
 
