@@ -11,6 +11,7 @@ import NetworkService from "./services/NetworkService";
 import LanguageService from "./services/LanguageService";
 import StatusService from "./services/StatusService";
 import FeeService from "./services/FeeService";
+import TokenService from "./services/TokenService";
 // import BackupService from './services/BackupService';
 import ExchangeService, {STABLETOKENS,BASETOKENS} from "./services/ExchangeService";
 
@@ -37,6 +38,7 @@ ProxyService.setBucket(bucket);
 NetworkService.setBucket(bucket);
 LanguageService.setBucket(bucket);
 FeeService.setBucket(bucket);
+TokenService.setBucket(bucket);
 // BackupService.setBucket(bucket);
 
 
@@ -54,6 +56,7 @@ NetworkService.watch();
 LanguageService.watch();
 StatusService.watch();
 FeeService.watch();
+TokenService.watch();
 
 
 
@@ -188,6 +191,10 @@ routes.get('/proxies', async (req, res) => {
 	let proxies = await ProxyService.getProxies();
 	if(flat) proxies = flattenBlockchainObject(proxies);
 	returnResult(proxies, req, res);
+});
+
+routes.get('/tokenmeta', async (req, res) => {
+	returnResult(await TokenService.getTokens(), req, res);
 });
 
 routes.get('/languages', async (req, res) => {
