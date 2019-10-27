@@ -208,7 +208,7 @@ routes.get('/apps', async (req, res) => {
 });
 
 routes.get('/apps/featured', async (req, res) => {
-	returnResult(await AppService.getFeatured(), req, res);
+	returnResult(await AppService.getFeaturedApps(), req, res);
 });
 
 routes.post('/apps', async (req, res) => {

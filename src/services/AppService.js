@@ -174,4 +174,61 @@ export default class AppService {
         ]
     }
 
+    static async getFeaturedApps(){
+    	return await Promise.all([
+		    {
+			    applink:'eosbet.io',
+			    img:'https://get-scatter.com/promos/eosbet.io.jpg',
+			    url:'https://eosbet.io/?ref=scatterrefer&utm_campaign=eos%20bet%20standard',
+		    },
+		    {
+			    applink:'dappspinach.io',
+			    img:'https://get-scatter.com/promos/dappspinach.io.jpg',
+			    url:'https://dappspinach.io/dapp/pc/dist/?channel=scat&utm_campaign=spinach+standard',
+		    },
+		    {
+			    applink:'mycryptovegas.io',
+			    img:'https://get-scatter.com/promos/mycryptovegas.jpg',
+			    url:'https://mycryptovegas.io/?ref=354625577968&utm_campaign=crypto+vegas+slot+wars',
+		    },
+		    {
+			    applink:'hirevibes.io',
+			    img:'https://get-scatter.com/promos/hirevibes.jpg',
+			    url:'https://www.hirevibes.io/?utm_campaign=hirevibes+standard',
+		    },
+		    {
+			    applink:'prospectors.io',
+			    img:'https://get-scatter.com/promos/prospectors.jpg',
+			    url:'https://prospectors.io?ref=scatterrefer&utm_campaign=prospectors+standard',
+		    },
+		    {
+			    applink:'cryptomaniaslots.com',
+			    img:'https://get-scatter.com/promos/cryptomania.jpg',
+			    url:'https://cryptomaniaslots.com/?ref=scatterrefer&utm_source=scatter.com/apps&utm_medium=banner&utm_campaign=blck',
+		    },
+		    {
+			    applink:'bethash.io',
+			    img:'https://get-scatter.com/promos/bethash.jpg',
+			    url:'https://bethash.io/?ref=scatterrefer&utm_campaign=bethash+standard',
+		    },
+		    {
+			    applink:'trustdice.win',
+			    img:'https://get-scatter.com/promos/trustdice.win.jpg',
+			    url:'https://trustdice.win/faucet?coinbox&ref=scatterrefer&utm_campaign=trustdice+standard',
+		    },
+		    {
+			    applink:'dice.one',
+			    img:'https://get-scatter.com/promos/dice.one.jpg',
+			    url:'https://dice.one/?ref=scatterrefer&utm_campaign=dice+standard',
+		    }
+	    ].map(async x => {
+		    let meta = await AppService.findApp(x.applink);
+		    if(meta){
+			    meta = Object.assign(meta, x);
+		    } else meta = x;
+
+		    return FeaturedApp.fromJson(meta);
+	    }))
+    }
+
 }

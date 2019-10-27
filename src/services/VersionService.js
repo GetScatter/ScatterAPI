@@ -55,6 +55,7 @@ export default class VersionService {
                 gzip: true
             }).then(x => x.json()).then(async res => {
                 if(res.prerelease) return null;
+                if(!res.assets) return null;
 
                 const getAsset = needle => res.assets.find(x => x.name.indexOf(needle) > -1) || {url:'#'};
                 const getDownloadUrl = url => fetch(url).then(x => x.json()).then(x => x.browser_download_url).catch(() => '');

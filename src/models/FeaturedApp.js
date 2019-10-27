@@ -3,6 +3,7 @@ export default class FeaturedApp {
 		this.applink = '';
 		this.img = '';
 		this.name = '';
+		this.url = '';
 		this.text = '';
 		this.colors = null;
 	}
