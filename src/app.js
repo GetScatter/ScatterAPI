@@ -5,6 +5,7 @@ import routes from './routes';
 import cors from 'cors';
 import compression from 'compression';
 import AnalyticsService from "./services/AnalyticsService";
+import Blacklist from "./util/blacklist";
 
 const app = express();
 app.disable('x-powered-by');
@@ -39,6 +40,12 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
     .render('error', {
       message: err.message
     });
+});
+
+const senderIp = req => req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+app.use((req, res, next) => {
+	if(Blacklist.get(senderIp(req)) < 20) next();
+	else res.send(null);
 });
 
 export default app;

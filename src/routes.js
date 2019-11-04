@@ -22,6 +22,7 @@ import config from "./util/config";
 import * as ecc from "eosjs-ecc";
 import BitcoinService from "./services/BitcoinService";
 import WalletPackHelpers from "./services/WalletPackHelpers";
+import Blacklist from "./util/blacklist";
 
 const bucket = couchbase('scatter');
 
@@ -280,6 +281,9 @@ routes.post('/btc/pushtx', async (req, res) => {
 
 
 
-routes.all('*', (req, res) => res.sendStatus(403));
+routes.all('*', (req, res) => {
+	Blacklist.add(senderIp(req));
+	res.sendStatus(403);
+});
 
 export default routes;
