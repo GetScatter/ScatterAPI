@@ -95,7 +95,13 @@ const POST = ip => (route, data, api = coinSwitchApi) => fetch(`${api}${route}`,
 	method:"POST",
 	headers:getHeaders(api, ip),
 	body:JSON.stringify(data),
-}).then(r => r.json()).then(x => x.data);
+}).then(r => r.json()).then(x => {
+	if(x.hasOwnProperty('success') && x.success === false){
+		return x.msg;
+	}
+
+	return x.data
+});
 
 export default class ExchangeService {
 
@@ -250,6 +256,10 @@ export default class ExchangeService {
 		    };
 
 		    const order = await this.post(`order`, data).then(res => {
+		    	if(!res.hasOwnProperty('orderId')){
+		    		return res;
+			    }
+
 			    return {
 				    id:res.orderId,
 				    account:res.exchangeAddress.address,
@@ -263,6 +273,9 @@ export default class ExchangeService {
 			    console.error('EXCHANGE ERR: ', err);
 			    return null;
 		    });
+
+		    // Error message
+		    if(typeof order === 'string') return order;
 
 		    delete token.id;
 		    if(order) await bucket.upsert(`order:${order.id}`, {order, service, from:token, to:toSymbol, accepted:false});
