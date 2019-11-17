@@ -60,6 +60,9 @@
     "nodemon": "^1.12.1",
     "supertest": "^3.0.0"
   },
+  "resolutions": {
+    "**/lodash": "^4.17.12"
+  },
   "bugs": {
     "url": "https://github.com/vmasto/express-babel/issues"
   },
