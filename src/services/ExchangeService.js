@@ -234,7 +234,7 @@ export default class ExchangeService {
 
     }
 
-    async createOrder(service, token, toSymbol, amount, from, to){
+    async createOrder(service, token, toSymbol, amount, from, to, returnsErrors = false){
 
 	    const fromSymbol = token.symbol;
 
@@ -275,7 +275,9 @@ export default class ExchangeService {
 		    });
 
 		    // Error message
-		    if(typeof order === 'string') return order;
+		    if(typeof order === 'string') {
+		    	return returnsErrors ? order : null;
+		    }
 
 		    delete token.id;
 		    if(order) await bucket.upsert(`order:${order.id}`, {order, service, from:token, to:toSymbol, accepted:false});

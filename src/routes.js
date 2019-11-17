@@ -123,10 +123,10 @@ routes.post('/exchange/rate', async (req, res) => {
 });
 
 routes.post('/exchange/order', async (req, res) => {
-	const {service, token, other, amount, from, to} = req.body;
+	const {service, token, other, amount, from, to, returnsErrors = false} = req.body;
 	const ip = senderIp(req);
 	const exchange = new ExchangeService(ip);
-	returnResult(await exchange.createOrder(service, token, other, amount, from, to), req, res);
+	returnResult(await exchange.createOrder(service, token, other, amount, from, to, returnsErrors), req, res);
 });
 
 routes.get('/exchange/order/:order', async (req, res) => {
