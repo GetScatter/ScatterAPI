@@ -12,6 +12,7 @@ import LanguageService from "./services/LanguageService";
 import StatusService from "./services/StatusService";
 import FeeService from "./services/FeeService";
 import TokenService from "./services/TokenService";
+import ChatService from "./services/ChatService";
 // import BackupService from './services/BackupService';
 import ExchangeService, {STABLETOKENS,BASETOKENS} from "./services/ExchangeService";
 
@@ -60,6 +61,10 @@ FeeService.watch();
 TokenService.watch();
 
 
+/********************************/
+/*          SERVICES            */
+/********************************/
+ChatService.init();
 
 
 const routes = Router();
@@ -97,6 +102,10 @@ routes.get('/currencies/prices', async (req, res) => {
 routes.get('/prices', async (req, res) => {
 	const {v2} = req.query;
 	returnResult(await PriceService.getV2Prices(v2), req, res)
+});
+
+routes.get('/prices/conversions', async (req, res) => {
+	returnResult(await FiatService.getConversions(), req, res)
 });
 
 routes.get('/prices/timeline', async (req, res) => {
