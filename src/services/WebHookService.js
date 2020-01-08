@@ -10,7 +10,7 @@ export default class WebHookService {
 
 	static setBucket(_b){
 		bucket = _b;
-		bucket.get(bucketKey).then(x => inRam = x).catch(err => {
+		bucket.get(bucketKey).then(x => inRam = x.value || []).catch(err => {
 			if(err.code === 13) bucket.upsert(bucketKey, inRam);
 			console.log('ERRRRR', err);
 		});
