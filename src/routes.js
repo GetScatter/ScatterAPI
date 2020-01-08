@@ -23,6 +23,7 @@ import * as ecc from "eosjs-ecc";
 import BitcoinService from "./services/BitcoinService";
 import WalletPackHelpers from "./services/WalletPackHelpers";
 import Blacklist from "./util/blacklist";
+import WebHookService from "./services/WebHookService";
 
 const bucket = couchbase('scatter');
 
@@ -40,6 +41,7 @@ NetworkService.setBucket(bucket);
 LanguageService.setBucket(bucket);
 FeeService.setBucket(bucket);
 TokenService.setBucket(bucket);
+WebHookService.setBucket(bucket);
 // BackupService.setBucket(bucket);
 
 
@@ -278,6 +280,32 @@ routes.post('/btc/pushtx', async (req, res) => {
 	const signed = req.body.signed;
 	returnResult(await BitcoinService.pushTransaction(signed), req, res);
 });
+
+
+
+/************************************************/
+/*                                              */
+/*              Webhooks                 */
+/*                                              */
+/************************************************/
+
+
+routes.post('/hook/moonpay', async (req, res) => {
+	const payload = req.body;
+	WebHookService.setHook('moonpay', payload);
+	returnResult(true, req, res);
+});
+
+routes.get('/hook/:service/:id', async (req, res) => {
+	const {service, id} = req.params;
+	returnResult(await WebHookService.findHooks(service, id), req, res);
+});
+
+routes.get('/hook/remove/:unique', async (req, res) => {
+	const {unique} = req.params;
+	returnResult(await WebHookService.removeHook(unique), req, res);
+});
+
 
 
 
