@@ -290,20 +290,21 @@ routes.post('/btc/pushtx', async (req, res) => {
 /************************************************/
 
 
-routes.post('/hook/moonpay', async (req, res) => {
+routes.get('/hook/remove/:unique', async (req, res) => {
+	const {unique} = req.params;
+	returnResult(await WebHookService.removeHook(unique), req, res);
+});
+
+routes.post('/hook/:service', async (req, res) => {
+	const {service} = req.params;
 	const payload = req.body;
-	WebHookService.setHook('moonpay', payload);
+	WebHookService.setHook(service, payload);
 	returnResult(true, req, res);
 });
 
 routes.get('/hook/:service/:id', async (req, res) => {
 	const {service, id} = req.params;
 	returnResult(await WebHookService.findHooks(service, id), req, res);
-});
-
-routes.get('/hook/remove/:unique', async (req, res) => {
-	const {unique} = req.params;
-	returnResult(await WebHookService.removeHook(unique), req, res);
 });
 
 
