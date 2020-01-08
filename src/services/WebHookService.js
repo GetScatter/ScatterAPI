@@ -25,7 +25,7 @@ export default class WebHookService {
 			return {
 				service:x.service,
 				id:x.id,
-				status:x.payload.status,
+				status:x.data.status,
 				unique:x.unique,
 			}
 		});
