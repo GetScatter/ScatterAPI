@@ -40,7 +40,8 @@ export default class WebHookService {
 
 	static async moonpay(payload){
 		const {id, status, externalCustomerId, updatedAt} = payload;
-		inRam.push({service:'moonpay', unique:Math.round(Math.random() * 99999999999), id:externalCustomerId, payload});
+		inRam = inRam.filter(x => x.unique !== id);
+		inRam.push({service:'moonpay', unique:id, id:externalCustomerId, payload});
 		await bucket.upsert(bucketKey, inRam);
 		return true;
 		/*
