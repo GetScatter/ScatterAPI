@@ -23,6 +23,7 @@ export const BANCOR_EOS_PAIRS = [
 	// token(`DEOS Games`, `DEOS`, `thedeosgames`),
 	token('5c0e698a48ded4568c33eea3', `MyVegas`, `MEV`, `eosvegascoin`),
 	token('5c45c33851c75d8823bd7b0f', `Carbon`, `CUSD`, `stablecarbon`),
+	token('1', `EOSDT`, `EOSDT`, `eosdtsttoken`),
 ];
 
 export const BANCOR_RELAYS = {
@@ -41,7 +42,10 @@ export const BANCOR_RELAYS = {
 	'DEOS':'bancorc11115',
 	'MEV':'bancorc11134',
 	'CUSD':'bancorc11144',
+	'EOSDT':'bancorc11222',
 };
+
+// https://github.com/bancorprotocol/bancor-sdk/blob/master/src/blockchains/eos/paths.ts
 
 /*
 	Bancor	BNT	bnt2eosrelay	bnt2eoscnvrt
