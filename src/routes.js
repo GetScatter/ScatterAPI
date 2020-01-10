@@ -110,6 +110,10 @@ routes.get('/prices/:blockchain/:chainId', async (req, res) => {
 	returnResult(false, req, res);
 });
 
+routes.get('/exchange/available', async (req, res) => {
+	returnResult(ExchangeService.exchangeable(), req, res);
+});
+
 routes.post('/exchange/pairs', async (req, res) => {
 	const {token, other} = req.body;
 	const ip = senderIp(req);

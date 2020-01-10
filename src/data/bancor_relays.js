@@ -24,6 +24,7 @@ export const BANCOR_EOS_PAIRS = [
 	token('5c0e698a48ded4568c33eea3', `MyVegas`, `MEV`, `eosvegascoin`),
 	token('5c45c33851c75d8823bd7b0f', `Carbon`, `CUSD`, `stablecarbon`),
 	token('1', `EOSDT`, `EOSDT`, `eosdtsttoken`),
+	token('2', `Emanate`, `EMT`, `emanateoneos`),
 ];
 
 export const BANCOR_RELAYS = {

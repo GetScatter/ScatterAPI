@@ -130,6 +130,25 @@ export default class ExchangeService {
 
     }
 
+    static exchangeable(){
+
+    	const basePairs = [
+		    `btc:btc:btc:1`,
+		    `eth:eth:eth:1`,
+		    `trx:trx:trx:1`,
+		    `eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906`,
+		    // `eth:0xdac17f958d2ee523a2206206994597c13d831ec7:TUSD:1`,
+		    `eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48:USDC:1`,
+		    // `eth:0x0000000000085d4780B73119b644AE5ecd22b376:TUSD:1`,
+	    ];
+
+    	const bancor = BANCOR_EOS_PAIRS.map(x => {
+		    return `${x.token.blockchain}:${x.token.contract}:${x.token.symbol}:${x.token.chainId}`
+	    });
+
+		return basePairs.concat(bancor);
+    }
+
     async pairs(token, toSymbol){
         if(!toSymbol) toSymbol = '';
 
@@ -143,7 +162,7 @@ export default class ExchangeService {
         	let coinswitchPairs;
 
         	const key = `coinswitch::pairs::${fromSymbol.toLowerCase()}::${toSymbol.toLowerCase()}::${timestamp.getDate()}-${timestamp.getHours()}`;
-        	console.log('cache', key, pairCaches.hasOwnProperty(key), Object.keys(pairCaches));
+        	// console.log('cache', key, pairCaches.hasOwnProperty(key), Object.keys(pairCaches));
         	if(pairCaches.hasOwnProperty(key)) coinswitchPairs = pairCaches[key];
         	else {
 		        coinswitchPairs = await this.post(`pairs`, {depositCoin:fromSymbol.toLowerCase(), destinationCoin:toSymbol.toLowerCase()}, coinSwitchApi)
