@@ -2,10 +2,10 @@ export default class FeatureFlags {
 
 	static bridge(){
 		return {
-			savings:false,
-			exchange:false,
-			stabilize:false,
-			buy:false,
+			savings:true,
+			exchange:true,
+			stabilize:true,
+			buy:true,
 		}
 	}
 
