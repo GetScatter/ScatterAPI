@@ -24,6 +24,7 @@ import BitcoinService from "./services/BitcoinService";
 import WalletPackHelpers from "./services/WalletPackHelpers";
 import Blacklist from "./util/blacklist";
 import WebHookService from "./services/WebHookService";
+import FeatureFlags from "./services/FeatureFlags";
 
 const bucket = couchbase('scatter');
 
@@ -309,6 +310,20 @@ routes.post('/hook/:service', async (req, res) => {
 routes.get('/hook/:service/:id', async (req, res) => {
 	const {service, id} = req.params;
 	returnResult(await WebHookService.findHooks(service, id), req, res);
+});
+
+/************************************************/
+/*                                              */
+/*              FEATURE FLAGS                   */
+/*                                              */
+/************************************************/
+
+
+routes.get('/flags/:wallet', async (req, res) => {
+	const {wallet} = req.params;
+	let flags = {};
+	if(typeof FeatureFlags[wallet] === 'function') flags = FeatureFlags[wallet]();
+	returnResult(flags, req, res);
 });
 
 
