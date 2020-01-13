@@ -177,9 +177,9 @@ export default class AppService {
     static async getFeaturedApps(){
     	return await Promise.all([
 		    {
-			    applink:'eosbet.io',
+			    applink:'earnbet.io',
 			    img:'https://get-scatter.com/promos/eosbet.io.jpg',
-			    url:'https://eosbet.io/?ref=scatterrefer&utm_campaign=eos%20bet%20standard',
+			    url:'https://earnbet.io/?ref=scatterrefer&utm_campaign=eos%20bet%20standard',
 		    },
 		    {
 			    applink:'dappspinach.io',
@@ -200,11 +200,6 @@ export default class AppService {
 			    applink:'prospectors.io',
 			    img:'https://get-scatter.com/promos/prospectors.jpg',
 			    url:'https://prospectors.io?ref=scatterrefer&utm_campaign=prospectors+standard',
-		    },
-		    {
-			    applink:'cryptomaniaslots.com',
-			    img:'https://get-scatter.com/promos/cryptomania.jpg',
-			    url:'https://cryptomaniaslots.com/?ref=scatterrefer&utm_source=scatter.com/apps&utm_medium=banner&utm_campaign=blck',
 		    },
 		    {
 			    applink:'bethash.io',
