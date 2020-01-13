@@ -327,7 +327,7 @@ routes.get('/flags/:wallet', async (req, res) => {
 	returnResult(flags, req, res);
 });
 
-
+const URL = require('url').URL;
 routes.post('/moonpay/sign', async (req, res) => {
 	const {url} = req.body;
 	const signature = crypto
