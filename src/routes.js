@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import Blockchains, {flattenBlockchainObject} from './util/blockchains';
 
 import PriceService, {PRICE_NETS, CURRENCIES} from './services/PriceService';
@@ -324,6 +325,16 @@ routes.get('/flags/:wallet', async (req, res) => {
 	let flags = {};
 	if(typeof FeatureFlags[wallet] === 'function') flags = FeatureFlags[wallet]();
 	returnResult(flags, req, res);
+});
+
+
+routes.post('/moonpay/sign', async (req, res) => {
+	const {url} = req.body;
+	const signature = crypto
+		.createHmac('sha256', process.env.MOONPAY_KEY)
+		.update(new URL(url).search)
+		.digest('base64');
+	returnResult(signature, req, res);
 });
 
 
