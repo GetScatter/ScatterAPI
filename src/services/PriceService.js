@@ -232,14 +232,16 @@ export const fetchers = {
 				if(!res.data) return null;
 
 				let data = res.data.map(x => {
+
+					if(x.symbol === 'eosio.token-tlos-eos'){
+						x.symbol = 'eosio.token-tlos-tlos';
+					}
+
 					const [contract, symbol, chain] = x.symbol.split('-');
 					if(!EOS_CHAIN_IDS[chain]) return null;
 					return { contract, symbol:x.currency, price:x.last, chainId:EOS_CHAIN_IDS[chain] }
 				}).filter(x => !!x);
-				// let data = res.data.filter(x => x.symbol.indexOf('-eos') === x.symbol.length - 4);
-				// data = data.map(({change, contract, currency:symbol, last:price}) => ({
-				// 	contract, symbol, price, chainId:PRICE_NETS.EOS_MAINNET.replace('prices:eos:', '')
-				// }))
+
 				data = data.filter(x => x.contract !== 'eosio.token');
 				return data;
 			}).catch(err => {
