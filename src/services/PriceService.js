@@ -20,6 +20,12 @@ export const PRICE_NETS = {
     MAIN:'prices',
     EOS_MAINNET:'prices:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
     ETH_MAINNET:'prices:eth:1'
+};
+
+const EOS_CHAIN_IDS = {
+	'eos':'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906',
+	'wax':'1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4',
+	'tlos':'4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11'
 }
 
 const networks = Object.keys(PRICE_NETS).map(x => PRICE_NETS[x]);
@@ -189,7 +195,7 @@ export default class PriceService {
 }
 
 
-const fetchers = {
+export const fetchers = {
 	[PRICE_NETS.MAIN]:async () => {
 		const SYMBOLS = 'BTC,TRX,ETH,EOS,BTC'
 		const prices = await Promise.race([
@@ -225,14 +231,15 @@ const fetchers = {
 			}).then(x => x.json()).then(res => {
 				if(!res.data) return null;
 
-				let data = res.data.filter(x => x.symbol.indexOf('-eos') === x.symbol.length - 4);
-
-				// let data = res.data.filter(x => x.symbol.indexOf('-eusd') === -1);
-				// data = res.data.filter(x => x.symbol.indexOf('-cusd') === -1 || x.symbol === 'stablecarbon-cusd-eos');
-				// data = res.data.filter(x => x.symbol.indexOf('-tlos') === -1);
-				data = data.map(({change, contract, currency:symbol, last:price}) => ({
-					contract, symbol, price, chainId:PRICE_NETS.EOS_MAINNET.replace('prices:eos:', '')
-				}))
+				let data = res.data.map(x => {
+					const [contract, symbol, chain] = x.symbol.split('-');
+					if(!EOS_CHAIN_IDS[chain]) return null;
+					return { contract, symbol:x.currency, price:x.last, chainId:EOS_CHAIN_IDS[chain] }
+				}).filter(x => !!x);
+				// let data = res.data.filter(x => x.symbol.indexOf('-eos') === x.symbol.length - 4);
+				// data = data.map(({change, contract, currency:symbol, last:price}) => ({
+				// 	contract, symbol, price, chainId:PRICE_NETS.EOS_MAINNET.replace('prices:eos:', '')
+				// }))
 				data = data.filter(x => x.contract !== 'eosio.token');
 				return data;
 			}).catch(err => {

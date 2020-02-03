@@ -1,17 +1,17 @@
 import { assert } from 'chai';
 import 'mocha';
 
-import PriceService from '../src/services/PriceService';
+import PriceService, {fetchers, PRICE_NETS} from '../src/services/PriceService';
 import couchbase from '../src/database/couchbase'
-const bucket = couchbase('scatter');
-PriceService.setBucket(bucket);
+// const bucket = couchbase('scatter');
+// PriceService.setBucket(bucket);
 
 
 describe('PriceService', () => {
-    it('should be able to get an eos transaction', done => {
+    it('should be able to get prices', done => {
         new Promise(async() => {
-            const time = await PriceService.getBackupTimePaidFor('eos', '0.5000 EOS');
-            console.log('time', time);
+            const prices = await fetchers[PRICE_NETS.EOS_MAINNET]();
+            console.log('prices', prices);
             done();
         });
     });
