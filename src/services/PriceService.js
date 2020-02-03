@@ -231,7 +231,7 @@ export const fetchers = {
 			}).then(x => x.json()).then(res => {
 				if(!res.data) return null;
 
-				let data = res.data.map(x => {
+				return res.data.map(x => {
 
 					if(x.symbol === 'eosio.token-tlos-eos'){
 						x.symbol = 'eosio.token-tlos-tlos';
@@ -241,9 +241,6 @@ export const fetchers = {
 					if(!EOS_CHAIN_IDS[chain]) return null;
 					return { contract, symbol:x.currency, price:x.last, chainId:EOS_CHAIN_IDS[chain] }
 				}).filter(x => !!x);
-
-				data = data.filter(x => x.contract !== 'eosio.token');
-				return data;
 			}).catch(err => {
 				console.error(err);
 				return null;
