@@ -320,7 +320,11 @@ export default class ExchangeService {
 
 		    const id = `${fromAccount}:${toSymbol}:${toAccount}:${amount}:${+new Date()}`;
 
-		    const decimals = toSymbol.toUpperCase() === 'IQ' ? 3 : 4;
+		    const specialTokens = {
+			    'IQ':3,
+			    'EOSDT':9
+		    }
+		    const decimals = specialTokens[toSymbol] ? specialTokens[toSymbol] : 4;
 		    const amountWithSlippage = amount*rate - ((amount*rate)*0.06);
 		    const memo = `1,${converter1} BNT ${converter2} ${toSymbol.toUpperCase()},${parseFloat(amountWithSlippage).toFixed(decimals)},${toAccount}`;
 
