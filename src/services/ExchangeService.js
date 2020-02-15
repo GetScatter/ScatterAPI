@@ -325,7 +325,7 @@ export default class ExchangeService {
 			    'EOSDT':9
 		    }
 		    const decimals = specialTokens[toSymbol.toUpperCase()] ? specialTokens[toSymbol.toUpperCase()] : 4;
-		    const amountWithSlippage = amount*rate - ((amount*rate)*0.1);
+		    const amountWithSlippage = amount*rate - ((amount*rate)*0.05);
 		    const memo = `1,${converter1} BNT ${converter2} ${toSymbol.toUpperCase()},${parseFloat(amountWithSlippage).toFixed(decimals)},${toAccount}`;
 
 		    const order = {
