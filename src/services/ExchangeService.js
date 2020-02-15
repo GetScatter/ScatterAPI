@@ -324,7 +324,7 @@ export default class ExchangeService {
 			    'IQ':3,
 			    'EOSDT':9
 		    }
-		    const decimals = specialTokens[toSymbol] ? specialTokens[toSymbol] : 4;
+		    const decimals = specialTokens[toSymbol.toUpperCase()] ? specialTokens[toSymbol.toUpperCase()] : 4;
 		    const amountWithSlippage = amount*rate - ((amount*rate)*0.06);
 		    const memo = `1,${converter1} BNT ${converter2} ${toSymbol.toUpperCase()},${parseFloat(amountWithSlippage).toFixed(decimals)},${toAccount}`;
 
