@@ -4,8 +4,9 @@ export default class FeatureFlags {
 		return {
 			savings:true,
 			exchange:true,
-			stabilize:true,
-			buy:true,
+			stabilize:false,
+			buy:false,
+			ridl:false,
 		}
 	}
 
