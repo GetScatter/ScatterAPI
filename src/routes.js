@@ -99,8 +99,12 @@ routes.get('/currencies/prices', async (req, res) => {
 });
 
 routes.get('/prices', async (req, res) => {
-	const {v2} = req.query;
-	returnResult(await PriceService.getV2Prices(v2), req, res)
+	const {v2, v3} = req.query;
+	let prices;
+	if(!v3) prices = await PriceService.getV2Prices(v2);
+	else prices = await PriceService.getV3Prices(v3);
+
+	returnResult(prices, req, res)
 });
 
 routes.get('/prices/timeline', async (req, res) => {

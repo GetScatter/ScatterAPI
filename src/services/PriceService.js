@@ -143,6 +143,56 @@ export default class PriceService {
 	    return result;
     }
 
+    static async getV3Prices(uniques = []){
+	    const prices = await PriceService.getPrices();
+	    const {EOS, ETH, TRX, BTC} = prices[PRICE_NETS.MAIN];
+	    const eosMainnetPrices = prices[PRICE_NETS.EOS_MAINNET];
+	    const ethMainnetPrices = prices[PRICE_NETS.ETH_MAINNET];
+
+	    let result;
+
+
+	    let conversions = await FiatService.getConversions();
+	    conversions = CURRENCIES.reduce((acc,tick) => {
+		    acc[tick] = conversions[tick];
+		    return acc;
+	    }, {});
+
+	    const convertToMultiCurrency = x => {
+		    return Object.keys(conversions).reduce((acc,fiatTicker) => {
+			    acc[fiatTicker] = parseFloat(x.price * conversions[fiatTicker]).toFixed(8);
+			    return acc;
+		    }, {});
+	    };
+
+	    result = {
+		    'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906':convertToMultiCurrency(EOS),
+		    'eos:eosio.token:eos:aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906:CPU / NET':convertToMultiCurrency(EOS),
+		    'eth:eth:eth:1':convertToMultiCurrency(ETH),
+		    'btc:btc:btc:1':convertToMultiCurrency(BTC),
+		    'trx:trx:trx:1':convertToMultiCurrency(TRX),
+	    };
+
+
+
+	    eosMainnetPrices.map(x => {
+	    	const unique = `eos:${x.contract}:${x.symbol}:${x.chainId}`.toLowerCase();
+	    	if(!uniques.includes(unique)) return;
+		    const clone = JSON.parse(JSON.stringify(x))
+		    clone.price = parseFloat(parseFloat(EOS.price * x.price).toFixed(8));
+		    result[unique] = convertToMultiCurrency(clone);
+	    })
+
+	    ethMainnetPrices.map(x => {
+		    const unique = `eth:${x.contract}:${x.symbol}:1`.toLowerCase();
+		    if(!uniques.includes(unique)) return;
+		    const clone = JSON.parse(JSON.stringify(x))
+		    result[unique] = convertToMultiCurrency(clone);
+	    })
+
+	    return result;
+    }
+
     static async watch(){
         clearInterval(priceInterval);
         return new Promise(async resolve => {
