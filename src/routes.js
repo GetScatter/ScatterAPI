@@ -345,6 +345,49 @@ routes.post('/moonpay/sign', async (req, res) => {
 
 
 
+/************************************************/
+/*                                              */
+/*                 WEB SOCKETS                  */
+/*                                              */
+/************************************************/
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: process.env.WS_PORT });
+
+// This is really only used to speed up setup time since many calls
+// takes a long time when done in unison due to 3 simultaneous request limitations.
+wss.on('connection', (ws) => {
+	ws.on('message', async (msg) => {
+		try {
+			const {route, data, id} = JSON.parse(msg);
+			const returnSocket = data => ws.send(JSON.stringify({ data, id, signed:ecc.sign(id, proofKey) }));
+
+			if(route === 'apps/featured') return returnSocket(await AppService.getFeaturedApps());
+			if(route === 'apps') {
+				let allApps = await AppService.getFlatApps();
+				if(!data || !data.length) return returnSocket(allApps);
+				const result = allApps.filter(x => data.includes(x.applink));
+				return returnSocket(result);
+			}
+			if(route === 'flags/bridge') return returnSocket(FeatureFlags.bridge());
+			if(route === 'prices') return returnSocket(await PriceService.getV3Prices(data));
+			if(route === 'tokenmeta') return returnSocket(await TokenService.getTokens());
+			if(route === 'currencies/prices') {
+				let prices = await FiatService.getConversions();
+				if(!prices) return returnSocket(null);
+				prices = CURRENCIES.reduce((acc,symbol) => {
+					acc[symbol] = prices[symbol];
+					return acc;
+				}, {});
+				return returnSocket(prices);
+			}
+
+		} catch(e){ console.error(e); /* rejections just fail */ }
+	});
+});
+
+
+
+
 routes.all('*', (req, res) => {
 	Blacklist.add(senderIp(req));
 	res.sendStatus(403);
