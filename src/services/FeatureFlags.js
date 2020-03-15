@@ -1,17 +1,30 @@
+import config from "../util/config";
+
+const FEATURES = config('FEATURES');
+
+// return {
+// 	savings:true,
+// 	exchange:true,
+// 	stabilize:false,
+// 	buy:false,
+// 	ridl:false,
+// }
+const getFeatures = () => {
+	let features = {};
+	FEATURES.map(feature => {
+		features[feature] = true;
+	});
+	return features;
+}
+
 export default class FeatureFlags {
 
 	static bridge(){
-		return {
-			savings:true,
-			exchange:true,
-			stabilize:false,
-			buy:false,
-			ridl:false,
-		}
+		return getFeatures();
 	}
 
 	static embed(){
-		return {}
+		return getFeatures();
 	}
 
 }
