@@ -1,6 +1,6 @@
 import config from "../util/config";
 
-const FEATURES = config('FEATURES');
+const FEATURES = (config('FEATURES') || "").split(',');
 
 // return {
 // 	savings:true,
