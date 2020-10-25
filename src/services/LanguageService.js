@@ -24,7 +24,7 @@ export default class LanguageService {
     }
 
     static async getLanguages(namesOnly = false, name = null){
-        if(!inRam) inRam = (await bucket.get(bucketKey)).value;
+        if(!inRam) inRam = (await bucket.get(bucketKey)).content;
 
         if(namesOnly) return inRam.map(x => x.name);
 

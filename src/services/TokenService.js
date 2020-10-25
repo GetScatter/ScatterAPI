@@ -25,7 +25,7 @@ export default class TokenService {
     }
 
     static async getTokens(){
-	    if(!inRam) inRam = (await bucket.get(bucketKey).catch(() => ({value:[]}))).value;
+	    if(!inRam) inRam = (await bucket.get(bucketKey).catch(() => ({content:[]}))).content;
         return inRam;
     }
 

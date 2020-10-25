@@ -20,7 +20,7 @@ export default class ExplorerService {
     }
 
     static async getApps(){
-        if(!inRam) inRam = (await bucket.get(bucketKey)).value;
+        if(!inRam) inRam = (await bucket.get(bucketKey)).content;
         return inRam;
     }
 

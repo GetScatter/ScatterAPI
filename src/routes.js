@@ -27,7 +27,7 @@ import Blacklist from "./util/blacklist";
 import WebHookService from "./services/WebHookService";
 import FeatureFlags from "./services/FeatureFlags";
 
-const bucket = couchbase('scatter');
+const bucket = couchbase.get('scatter');
 
 
 /********************************/

@@ -20,7 +20,7 @@ export default class VersionService {
     }
 
     static async getVersion(){
-        if(!inRam) inRam = (await bucket.get(bucketKey)).value;
+        if(!inRam) inRam = (await bucket.get(bucketKey)).content;
         return inRam;
     }
 

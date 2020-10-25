@@ -77,7 +77,7 @@ export default class PriceService {
     static async getPrices(){
         await Promise.all(networks.map(async net => {
 	        if(!pricesInRam.hasOwnProperty(net)){
-		        pricesInRam[net] = (await bucket.get(net)).value;
+		        pricesInRam[net] = (await bucket.get(net)).content;
 		        return true;
             } else {
 	            return true;
@@ -131,7 +131,7 @@ export default class PriceService {
 
 	    eosMainnetPrices.map(x => {
 		    const clone = JSON.parse(JSON.stringify(x))
-		    clone.price = parseFloat(parseFloat(EOS.price * x.price).toFixed(8));
+		    if(EOS) clone.price = parseFloat(parseFloat(EOS.price * x.price).toFixed(8));
 		    result[`eos:${x.contract}:${x.symbol}:${x.chainId}`.toLowerCase()] = convertToMultiCurrency(clone);
 	    })
 
@@ -219,7 +219,7 @@ export default class PriceService {
 
     static async getPriceTimeline(id){
     	return bucket.get(`prices:timeline:${id}`).then(x => {
-    		return x.value
+    		return x.content
 	    }).catch(err => {
 	    	console.error(err);
 	    	return {};
@@ -232,7 +232,7 @@ export default class PriceService {
 
 	    let pricesRaw = await this.getV2Prices(true, false);
 	    pricesRaw = Object.keys(pricesRaw).reduce((acc,x) => {
-	    	acc[x] = pricesRaw[x].price;
+	    	if(pricesRaw[x]) acc[x] = pricesRaw[x].price;
 	    	return acc;
 	    }, {});
 	    let prices = await this.getPriceTimeline(id);

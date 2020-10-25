@@ -21,7 +21,7 @@ export default class NetworkService {
     }
 
     static async getNetworks(){
-        if(!inRam) inRam = (await bucket.get(bucketKey)).value;
+        if(!inRam) inRam = (await bucket.get(bucketKey)).content;
         return inRam;
     }
 

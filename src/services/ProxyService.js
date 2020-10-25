@@ -20,7 +20,7 @@ export default class ProxyService {
     }
 
     static async getProxies(){
-        if(!inRam) inRam = (await bucket.get(bucketKey)).value;
+        if(!inRam) inRam = (await bucket.get(bucketKey)).content;
         return inRam;
     }
 

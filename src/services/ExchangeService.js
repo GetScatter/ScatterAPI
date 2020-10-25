@@ -6,7 +6,7 @@ const COINSWITCH_KEY = config('COINSWITCH_KEY');
 import couchbase from '../database/couchbase'
 import PriceService from "./PriceService";
 import {BANCOR_EOS_PAIRS, BANCOR_RELAYS} from "../data/bancor_relays";
-const bucket = couchbase('exchange');
+const bucket = couchbase.get('exchange');
 
 const pairCaches = {};
 
@@ -346,7 +346,7 @@ export default class ExchangeService {
     }
 
     async getOrder(orderId){
-	    const original = await bucket.get(`order:${orderId}`).then(x => x.value).catch(() => null);
+	    const original = await bucket.get(`order:${orderId}`).then(x => x.content).catch(() => null);
 	    if(!original) return;
 
 	    if(original.order.service === SERVICES.BANCOR_EOS){
@@ -364,12 +364,12 @@ export default class ExchangeService {
     }
 
     static async cancelled(orderId){
-    	await bucket.remove(`order:${orderId}`).then(x => x.value).catch(() => null);
+    	await bucket.remove(`order:${orderId}`).then(x => x.content).catch(() => null);
         return true;
     }
 
     static async accepted(orderId){
-	    const original = await bucket.get(`order:${orderId}`).then(x => x.value).catch(() => null);
+	    const original = await bucket.get(`order:${orderId}`).then(x => x.content).catch(() => null);
 	    original.accepted = true;
 	    await bucket.upsert(`order:${orderId}`, original).catch(() => null);
         return true;
