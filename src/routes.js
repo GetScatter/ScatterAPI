@@ -67,7 +67,6 @@ TokenService.watch();
 
 
 const routes = Router();
-
 const senderIp = req => req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
 const proofKey = config('PROOF_KEY');

@@ -159,6 +159,7 @@ export default class PriceService {
 	    }, {});
 
 	    const convertToMultiCurrency = x => {
+	    	if(!x) return {};
 		    return Object.keys(conversions).reduce((acc,fiatTicker) => {
 			    acc[fiatTicker] = parseFloat(x.price * conversions[fiatTicker]).toFixed(8);
 			    return acc;
