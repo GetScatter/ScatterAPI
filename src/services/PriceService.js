@@ -180,7 +180,7 @@ export default class PriceService {
 	    	const unique = `eos:${x.contract}:${x.symbol}:${x.chainId}`.toLowerCase();
 	    	if(!uniques.includes(unique)) return;
 		    const clone = JSON.parse(JSON.stringify(x))
-		    clone.price = parseFloat(parseFloat(EOS.price * x.price).toFixed(8));
+		    if(EOS.price) clone.price = parseFloat(parseFloat(EOS.price * x.price).toFixed(8));
 		    result[unique] = convertToMultiCurrency(clone);
 	    })
 
