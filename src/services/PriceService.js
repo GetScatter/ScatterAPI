@@ -251,14 +251,24 @@ export const fetchers = {
 		const SYMBOLS = 'BTC,TRX,ETH,EOS,BTC'
 		const prices = await Promise.race([
 			new Promise(resolve => setTimeout(() => resolve(false), 2500)),
-			fetch(`https://min-api.cryptocompare.com/data/pricemulti?fsyms=${SYMBOLS}&tsyms=USD&api_key=${COMPARE_KEY}`)
+			// fetch(`https://min-api.cryptocompare.com/data/pricemulti?fsyms=${SYMBOLS}&tsyms=USD&api_key=${COMPARE_KEY}`)
+			fetch(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,eos,ethereum,tron&vs_currencies=usd`)
 			.then(x => x.json())
 			.then(res => {
 				return Object.keys(res).map(symbol => {
+					const ticker = (() => {
+						switch (symbol) {
+							case 'eos': return 'EOS';
+							case 'bitcoin': return 'BTC';
+							case 'ethereum': return 'ETH';
+							case 'tron': return 'TRX';
+						}
+					})();
+
 					return {
-						symbol,
-						name:symbol,
-						price:res[symbol].USD
+						symbol:ticker,
+						name:ticker,
+						price:res[symbol].usd
 					};
 				}).reduce((acc, x) => {
 					acc[x.symbol] = x;
@@ -270,6 +280,7 @@ export const fetchers = {
 			})
 		]);
 
+		console.log('prices', prices);
 		return cachePrices(PRICE_NETS.MAIN, prices);
 	},
 
